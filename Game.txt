@@ -1,24 +1,32 @@
-.MODEL SMALL
-.STACK 100H
-.DATA
+.model small
+.stack 100H
+.data
 
-titulo  db "    _____                          _     _       " ;texto do titulo na tela de menu
-        db "   / ____|                        | |   | |      "
-        db "  | (___   ___ _ __ __ _ _ __ ___ | |__ | | ___  "
-        db "   \___ \ / __| '__/ _` | '_ ` _ \| '_ \| |/ _ \ "
-        db "   ____) | (__| | | (_| | | | | | | |_) | |  __/ "
-        db "  |_____/ \___|_|  \__,_|_| |_| |_|_.__/|_|\___| "
 
-        
-jogar db "                ┌───────────┐              " ;opcoes de jogo
-      db "                │   JOGAR   │              "
-      db "                └───────────┘              "
-      
+                                    
+;----------------------Desenhos Strings-------------------
+titulo1          db " ___                    _    _     ",0 ;linha 1 do titulo
+titulo2          db "/ __| __ _ _ __ _ _ __ | |__| |___ ",0 ;linha 2 do titulo ;35x4
+titulo3          db "\__ \/ _| '_/ _` | '  \| '_ \ / -_)",0 ;linha 3 do titulo
+titulo4          db "|___/\__|_| \__,_|_|_|_|_.__/_\___|",0 ;linha 4 do titulo
 
-sair db "                  ┌────────┐                " ;opcoes de jogo
-     db "                  │  SAIR  │                "
-     db "                  └────────┘                "
-
+fase1_1          db " ______       _____ ______   __ "  ;32x6
+fase1_2          db "|  ____/\    / ____|  ____| /_ |"
+fase1_3          db "| |__ /  \  | (___ | |__     | |"
+fase1_4          db "|  __/ /\ \  \___ \|  __|    | |"
+fase1_5          db "| | / ____ \ ____) | |____   | |"
+fase1_6          db "|_|/_/    \_\_____/|______|  |_|"
+                                
+fase2_1          db "     _________   _____ ______   ___ " 
+fase2_2          db "    / ____/   | / ___// ____/  |__ \"
+fase2_3          db "   / /_  / /| | \__ \/ __/     __/ /"
+fase2_4          db "  / __/ / ___ |___/ / /___    / __/ "
+fase2_5          db " /_/   /_/  |_/____/_____/   /____/ "
+                                                               
+fase3_1          db "  _____ _____ _____ _____    ___ " 
+fase3_2          db " |   __|  _  |   __|   __|  |_  |"
+fase3_3          db " |   __|     |__   |   __|  |_  |"
+fase3_4          db " |__|  |__|__|_____|_____|  |___|"
 
 mensagem_derrota db "   ___   _   __  __ ___    _____   _____ ___  "   
                  db "  / __| /_\ |  \/  | __|  / _ \ \ / / __| _ \ "
@@ -28,14 +36,21 @@ mensagem_derrota db "   ___   _   __  __ ___    _____   _____ ___  "
 mensagem_vitoria db " __   _____ _  _  ___ ___ ___   ___  ___ _ "
                  db " \ \ / / __| \| |/ __| __|   \ / _ \| _ \ |"   
                  db "  \ V /| _|| .` | (__| _|| |) | (_) |   /_|"
-                 db "   \_/ |___|_|\_|\___|___|___/ \___/|_|_(_)"                                
-        
+                 db "   \_/ |___|_|\_|\___|___|___/ \___/|_|_(_)"      
+;----------------------FIM Desenhos Strings-------------------        
+
+;----------------------Desenhos Numeros-------------------
+jogar1      db 32,32,32,32,218,196,196,196,196,196,196,196,191,32,32,32,32,0  ;19x3
+jogar2      db 32,32,32,32,179,32,74,79,71,65,82,32,179,0
+jogar3      db 32,32,32,32,192,196,196,196,196,196,196,196,217,32,32,32,32,0
+
+sair1       db 32,32,32,32,218,196,196,196,196,196,196,196,191,32,32,32,32,0  ;19x3
+sair2       db 32,32,32,32,179,32,32,83,65,73,82,32,179,32,32,32,32,0
+sair3       db 32,32,32,32,192,196,196,196,196,196,196,196,217,32,32,32,32,0
 ;sistema
-selected_option db 0 ;opcao selecionada no menu
+flag_entrada     dw 0    ; 1 quando ENTER for pressionado
+selected_option  db 0 ;opcao selecionada no menu
 
-tela_atual db 0 ;tela atual (menu ou jogo)
-
-;jogo
 nave        db 1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
             db 0,1,1,1,1,1,0,0,0,0,0,4,4,4,4,4,4,0,14,14,14,0,0,0,0,0,0,0,0
             db 0,0,1,1,1,1,1,0,0,4,4,4,4,4,4,4,4,0,14,14,14,14,14,0,0,0,0,0,0
@@ -64,19 +79,19 @@ meteoro     db 0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0
             db 0,0,0,0,0,0,0,0,0,0,0,0,5,12,12,5,12,12,5,5,5,5,5,0,0,12,12,5,5,0
             db 0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0
 
-nave_ini    db 0,0,0,0,0,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,0,0,0,0,0,0,0,0,  
-            db 0,0,0,0,0,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,0,0,0,0,0,0,0,0,  
-            db 0,0,0,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,0,0,0,  
-            db 0,0,0,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,0,0,0,   
-            db 0,0,0,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,0,0,0,0,   
-            db 0,0,2,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,14,14,0,0,   
-            db 0,0,2,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,14,14,0,0,  
-            db 2,2,2,2,2,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,   
-            db 2,2,2,2,2,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,    
-            db 0,0,0,5,5,5,13,2,2,2,2,10,14,14,14,5,5,13,14,14,14,14,14,0,0,0,0,0,0,   
-            db 0,0,0,5,5,5,13,2,2,2,2,10,14,14,14,5,5,13,14,14,14,14,14,0,0,0,0,0,0,  
-            db 0,0,0,0,0,0,2,2,2,2,2,2,10,10,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0,  
-            db 0,0,0,0,0,0,2,2,2,2,2,2,10,10,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0, 
+nave_ini    db 0,0,0,0,0,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,0,0,0,0,0,0,0  
+            db 0,0,0,0,0,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,0,0,0,0,0,0,0  
+            db 0,0,0,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,0,0  
+            db 0,0,0,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,0,0   
+            db 0,0,0,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,14,0,0,0 
+            db 0,0,2,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,14,14,0,0  
+            db 0,0,2,2,2,5,5,5,13,13,14,14,5,5,5,13,13,14,14,5,5,5,13,13,14,14,14,0,0  
+            db 2,2,2,2,2,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14  
+            db 2,2,2,2,2,2,2,2,2,2,2,2,10,10,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14    
+            db 0,0,0,5,5,5,13,2,2,2,2,10,14,14,14,5,5,13,14,14,14,14,14,0,0,0,0,0,0   
+            db 0,0,0,5,5,5,13,2,2,2,2,10,14,14,14,5,5,13,14,14,14,14,14,0,0,0,0,0,0  
+            db 0,0,0,0,0,0,2,2,2,2,2,2,10,10,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0  
+            db 0,0,0,0,0,0,2,2,2,2,2,2,10,10,14,14,14,14,14,0,0,0,0,0,0,0,0,0,0 
 
 nave_menu   db 9,9,9,0,0,4,4,4,4,4,0,14,14,14,14,14,0,0,0
             db 0,9,9,4,4,4,4,4,4,4,4,0,14,14,0,0,14,0,0
@@ -86,3 +101,691 @@ nave_menu   db 9,9,9,0,0,4,4,4,4,4,0,14,14,14,14,14,0,0,0
             db 0,9,9,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0
             db 9,9,9,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0
 
+bloco3_1    db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,7,7,7,7,7,7,7,7,7,7
+            db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,0,0,0,0,0,0,0,0,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,0,0,0,0,0,0,0,0,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 4,4,4,4,0,0,0,0,4,4,4,4,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,0,0,0,0,0,0,0,0,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,0,0,0,0,0,0,0,0,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,11,11,11,11,11,11,11,11,7,7
+            db 0,0,4,4,4,4,4,4,4,4,0,0,7,7,7,7,7,7,7,7,7,7,7,7
+            
+bloco3_2    db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
+            db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
+            db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
+            db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
+            db 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
+            db 7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
+            db 4,4,4,4,7,7,7,7,4,4,4,4,4,4,4,4,7,7,7,7,4,4,4,4
+;---------------------- Fim Desenhos Numeros-------------------
+
+;--------Tela Inicial Variaveis----------
+nave_x      dw 10
+nave_y      dw 50
+nave_dir    dw 1 ;direita
+
+meteoro_x   dw 300
+meteoro_y   dw 70
+meteoro_dir dw 0 ;esquerda
+
+inimigo_x     dw 0        ; será randomizado
+inimigo_y     dw 90
+inimigo_dir   dw 0
+
+opcao_menu     dw 0    ; 0 = jogar, 1 = sair
+;--------Fim Tela Inicial----------
+
+;--------Variaveis Fixas Variaveis-----------------
+frame_time dw 16667 ;tempo em microsegundos que cada frame dura
+pontuacao dw 0 ;tempo percorrido na fase
+fase db 1 ; define o numero da fase
+tempo_fase dw 1800 ;define o tempo de duracao (em frames) da fase
+seed dw 0 ;valor chave usado para gerar o numero aleatorio   
+tela_atual db 0 ;tela atual (menu ou jogo)
+tempo_asteroide dw 0 ;contador de tempo para gerar asteroides
+nave_pos    dw 160 ;posicoes x e y da nave
+            dw 100
+;--------Fim Variaveis Fixas-----------------
+
+.CODE  
+
+;---------------Escreve String-----------------
+escreve_string proc
+    push ES         ;salva contextos
+    push BX
+
+    mov BX, DS      ;iguala BX a DS
+    mov ES, BX      ;ES fica igual a DS
+
+    mov ah,13h      ;atribui funcao 13 da interrupcao
+    mov al,01h      ;atribui a al para mover o cursor
+    pop BX          ;recupera contexto de BX para obter a cor       
+    xor bh,bh       ;video page 0
+
+    int 10h         ;chama interrup????o para escrever a string em questao
+    
+    pop ES          ;recupera contexto
+    ret
+endp
+;---------------Fim Escreve String-----------------
+
+;------------------Pinta Pixel--------------------
+pinta_pixel proc
+    push BX
+    push DX
+    push AX
+
+    mov BX, 320
+    mov AX, DX
+    mul BX
+    mov BX, AX
+
+    pop AX
+    pop DX
+
+    add BX, CX
+    mov SI, BX
+
+    mov ES:[SI], AL
+
+    pop BX
+    ret
+endp
+;---------------Fim Pinta Pixel--------------------
+
+;---------------Pinta e Apaga Desenho--------------------
+pinta_13X29 proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    mov si, bx
+    mov ax, dx
+    mov bx, 320
+    mul bx
+    add ax, cx
+    mov di, ax
+
+    mov dx, 13
+
+linha_loop:
+    mov cx, 29
+
+coluna_loop:
+    mov al, [si]
+    mov es:[di], al
+    inc si
+    inc di
+    loop coluna_loop
+
+    add di, 320-29
+    dec dx
+    jnz linha_loop
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;------------------Apaga Desenho----------------------
+apagar_sprite_13x29 proc
+    ; recebe:
+    ;   CX = x
+    ;   DX = y
+    ;   SI = OFFSET sprite (só para manter padrão, mas não usado)
+
+    push ax
+    push bx
+    push cx
+    push dx
+    push di
+
+    mov ax, dx
+    mov bx, 320
+    mul bx
+    add ax, cx
+    mov di, ax            ; início do sprite na VRAM
+
+    mov bx, 13            ; altura
+linha_apagar:
+    mov cx, 29            ; largura
+    xor al, al            ; preto
+apaga_coluna:
+    mov es:[di], al
+    inc di
+    loop apaga_coluna
+
+    add di, 320 - 29      ; próxima linha
+    dec bx
+    jnz linha_apagar
+
+    pop di
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+
+desenha_nave proc
+    mov CX, nave_pos
+    mov DX, [nave_pos+2]
+    call pinta_13X29
+    ret
+endp
+;---------------Fim Pinta e Apaga Desenho--------------------
+
+;---------------Muda de Tela--------------------
+mudar_tela proc
+   
+    mov CX, 57600       ;seleciona valor limite na tela
+pinta_preto:
+    mov SI, CX          ;passa valor do contador para SI
+    mov WORD PTR ES:[SI], 0      ;pinta de preto
+    loop pinta_preto    ;decrementa contador, verifica se chegou a zero. Senao, continua no loop
+    
+    ret
+endp
+;---------------Fim Muda de Tela--------------------
+
+;---------------Movimentação------------------------
+; move_horizontal
+; - escreve 13 pixels verticalmente com MOV/ADD (sem multiplicações por pixel)
+; Entrada:
+;   CX = x atual
+;   DX = y atual
+;   SI = direção (0 = esquerda, 1 = direita)
+move_horizontal proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    cmp si, 0     ; calcula coluna a apagar em BX
+    jne indo_direita
+
+    ; indo para a esquerda -> apagar lado direito do sprite
+    mov bx, cx
+    add bx, 28         ; coluna a apagar = x + (largura-1)
+    jmp prepara
+
+indo_direita:
+    mov bx, cx
+    dec bx             ; coluna a apagar = x - 1
+
+prepara:
+    ; DI_final = DX * 320 + BX
+    mov ax, dx         ; AX = y
+    mov di, 320
+    mul di             ; AX = y * 320
+    add ax, bx         ; AX += coluna
+    mov di, ax         ; DI = endereço inicial na VRAM (ES:DI)
+
+    ; limpa verticalmente 13 pixels (escreve AL=0 e soma 320 para próxima linha)
+    mov cx, 13
+    xor al, al
+
+clear_loop:
+    mov es:[di], al
+    add di, 320
+    dec cx
+    jnz clear_loop
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;------------------Fim Movimentação------------------------
+
+
+;-------------------Incio Video-----------------------------
+inicia_video proc
+    xor AH, AH
+    mov AL, 13h
+    int 10h
+    ret
+endp
+;-------------------Fim Incio Video-----------------------------
+
+;-------------------Movimentação na Tela Incial-----------------
+movimento_tela_inicial proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+; 1) NAVE ALIADA
+    ; apagar coluna antiga (direção = direita)
+    mov cx, [nave_x]
+    mov dx, [nave_y]
+    mov si, 1              ; 1 = direita (move_horizontal usa SI como direção)
+    call move_horizontal
+
+    ; atualizar X
+    mov ax, [nave_x]
+    inc ax
+    cmp ax, 320
+    jl .ali_ok
+
+    ; apagar sprite inteiro ANTES de resetar posição
+    mov cx, [nave_x]
+    mov dx, [nave_y]
+    mov si, OFFSET nave
+    call apagar_sprite_13x29
+    mov ax, 0     ; reaparece à esquerda
+.ali_ok:
+    mov [nave_x], ax
+    ; desenhar nova posição
+    mov bx, offset nave
+    mov cx, [nave_x]
+    mov dx, [nave_y]
+    call pinta_13X29
+; 2) METEORO
+    ; apagar coluna antiga (direção = esquerda)
+    mov cx, [meteoro_x]
+    mov dx, [meteoro_y]
+    mov si, 0              ; 0 = esquerda
+    call move_horizontal
+
+    mov ax, [meteoro_x]    ; atualizar X
+    dec ax
+    cmp ax, 0
+    jg .met_ok
+
+    mov cx, [meteoro_x]
+    mov dx, [meteoro_y]
+    mov si, OFFSET meteoro
+    call apagar_sprite_13x29
+    mov ax, 320          ; reaparece à direita
+.met_ok:
+    mov [meteoro_x], ax
+    ; desenhar nova posição
+    mov bx, offset meteoro
+    mov cx, [meteoro_x]
+    mov dx, [meteoro_y]
+    call pinta_13X29
+; 3) inimigo
+    ; apagar coluna antiga (usa inimigo_dir)
+    mov cx, [inimigo_x]
+    mov dx, [inimigo_y]
+    mov si, [inimigo_dir]    ; SI = 0 (esq) ou 1 (dir)
+    call move_horizontal
+
+    ; atualizar X com ping-pong
+    mov ax, [inimigo_x]
+    mov bx, [inimigo_dir]    ; bx = direção
+    cmp bx, 0
+    jne .inimigo_dir_right
+
+    ; indo para esquerda
+    dec ax
+    cmp ax, 0
+    jg .inimigo_depois
+    ; bateu na esquerda -> inverter para direita
+    mov word ptr [inimigo_dir], 1
+    jmp .inimigo_depois
+.inimigo_dir_right:
+    ; indo para direita
+    inc ax
+    cmp ax, 291            ; limite (320 - sprite_width(29)) = 291
+    jle .inimigo_depois
+    ; bateu na direita -> inverter para esquerda
+    mov word ptr [inimigo_dir], 0
+.inimigo_depois:
+    mov [inimigo_x], ax
+    ; desenhar inimigo
+    mov bx, offset nave_ini
+    mov cx, [inimigo_x]
+    mov dx, [inimigo_y]
+    call pinta_13X29
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;-------------------Movimentação na Tela Incial-----------------
+
+;-------------------Alterar Opção Menu---------------------------
+altera_opcao proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    ; JOGAR SELECTED (opcao 0)
+    cmp opcao_menu, 0
+    jne .sair_selected
+
+.jogar_selected:
+    ; JOGAR em vermelho
+    mov bl, 04h
+    mov dl, 11
+    mov dh, 16
+    mov cx, 18
+    mov bp, offset jogar1
+    call escreve_string
+
+    mov dh, 17
+    mov bp, offset jogar2
+    call escreve_string
+
+    mov dh, 18
+    mov bp, offset jogar3
+    call escreve_string
+
+    ; SAIR em branco
+    mov bl, 0Fh
+    mov dl, 11
+    mov dh, 19
+    mov cx, 19
+    mov bp, offset sair1
+    call escreve_string
+
+    mov dh, 20
+    mov bp, offset sair2
+    call escreve_string
+
+    mov dh, 21
+    mov bp, offset sair3
+    call escreve_string
+
+    jmp .end
+
+; SAIR SELECTED (opcao 1)
+.sair_selected:
+
+    ; JOGAR em branco
+    mov bl, 0Fh
+    mov dl, 11
+    mov dh, 16
+    mov cx, 18
+    mov bp, offset jogar1
+    call escreve_string
+
+    mov dh, 17
+    mov bp, offset jogar2
+    call escreve_string
+
+    mov dh, 18
+    mov bp, offset jogar3
+    call escreve_string
+
+    ; SAIR em vermelho
+    mov bl, 04h
+    mov dl, 11
+    mov dh, 19
+    mov cx, 19
+    mov bp, offset sair1
+    call escreve_string
+
+    mov dh, 20
+    mov bp, offset sair2
+    call escreve_string
+
+    mov dh, 21
+    mov bp, offset sair3
+    call escreve_string
+
+
+.end:
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;-------------------Fim Alterar Opção Menu---------------------------
+
+;-------------------Verificar Tecla Menu----------------------------
+verifica_tecla_menu proc
+    ; testa se há tecla disponível
+    mov ah, 01h
+    int 16h
+    jz .sem_tecla
+
+    ; lê a tecla (bloqueante)
+    mov ah, 00h
+    int 16h
+
+    ; ENTER?
+    cmp al, 13
+    je .enter_pres
+
+    ; verificar setas (usa AH)
+    cmp ah, 48h        ; seta ↑
+    je .seta_cima
+
+    cmp ah, 50h        ; seta ↓
+    je .seta_baixo
+
+    jmp .sem_tecla
+
+.seta_cima:
+    ; decrementa e trava em 0
+    mov ax, [opcao_menu]
+    cmp ax, 0
+    je .sem_tecla         ; já no topo
+    dec ax
+    mov [opcao_menu], ax
+    call altera_opcao
+    jmp .sem_tecla
+
+.seta_baixo:
+    ; incrementa e trava em 1
+    mov ax, [opcao_menu]
+    cmp ax, 1
+    je .sem_tecla         ; já no fim
+    inc ax
+    mov [opcao_menu], ax
+    call altera_opcao
+    jmp .sem_tecla
+
+.enter_pres:
+    mov [flag_entrada], 1
+    ret
+
+.sem_tecla:
+    ret
+endp
+;-------------------Verificar Tecla Menu----------------------------
+
+;-------------------Desenha Menu Principal--------------------------
+desenha_menu_inicial proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    ; ----------- TÍTULO -----------
+    mov bl, 0Ah         ; cor azul-claro
+    mov dl, 3
+
+    mov dh, 0
+    mov cx, 35
+    mov bp, OFFSET titulo1
+    call escreve_string
+
+    mov dh, 1
+    mov bp, OFFSET titulo2
+    call escreve_string
+
+    mov dh, 2
+    mov bp, OFFSET titulo3
+    call escreve_string
+
+    mov dh, 3
+    mov bp, OFFSET titulo4
+    call escreve_string
+
+
+    ; ----------- OPÇÃO JOGAR -----------
+    mov bl, 0Fh
+    mov dl, 11
+
+    mov dh, 16
+    mov cx, 18
+    mov bp, OFFSET jogar1
+    call escreve_string
+
+    mov dh, 17
+    mov bp, OFFSET jogar2
+    call escreve_string
+
+    mov dh, 18
+    mov bp, OFFSET jogar3
+    call escreve_string
+
+
+    ; ----------- OPÇÃO SAIR -----------
+    mov bl, 0Fh
+    mov dl, 11
+
+    mov dh, 19
+    mov cx, 19
+    mov bp, OFFSET sair1
+    call escreve_string
+
+    mov dh, 20
+    mov bp, OFFSET sair2
+    call escreve_string
+
+    mov dh, 21
+    mov bp, OFFSET sair3
+    call escreve_string
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;-------------------Fim Desenha Menu Principal--------------------------
+
+;-------------------Desenha Fase 1 -----------------------
+desenha_fase1 proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    mov bl, 09h                   ;cor do titulo
+    mov dh,4
+    mov dl,4
+    mov cx, 32
+    mov bp,OFFSET fase1_1
+    call escreve_string
+    mov dh,5
+    mov bp,OFFSET fase1_2
+    call escreve_string
+    mov dh,6
+    mov bp,OFFSET fase1_3
+    call escreve_string
+    mov dh,7
+    mov bp,OFFSET fase1_4
+    call escreve_string
+    mov dh,8
+    mov bp,OFFSET fase1_5
+    call escreve_string
+    mov dh,9
+    mov bp,OFFSET fase1_6
+    call escreve_string
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Fim Desenha Fase 1 -----------------------
+
+;-------------------Inicio-----------------------------------------
+INICIO:
+    INICIO:
+    MOV AX, @data
+    MOV DS, AX
+    MOV AX, 0A000h
+    mov ES, AX
+
+    ; gerar posição X aleatória
+    mov ax, seed
+    add ax, 37
+    xor dx, dx
+    mov bx, 292
+    div bx
+    mov inimigo_x, dx
+    add seed, 17
+
+    call inicia_video
+
+    ; DESENHA O MENU COMPLETO AQUI
+    call desenha_menu_inicial
+
+menu_loop:
+
+    call movimento_tela_inicial
+
+    mov cx, 30000
+delay_lp:
+    loop delay_lp
+
+    call verifica_tecla_menu
+
+    cmp flag_entrada, 1
+    jne .apenas_mover
+
+    mov flag_entrada, 0
+
+    cmp opcao_menu, 0
+    je jogo
+
+    cmp opcao_menu, 1
+    je sair
+    jmp menu_loop
+
+.apenas_mover:
+    call altera_opcao
+    jmp menu_loop
+
+jogo:
+    call mudar_tela
+    call desenha_fase1
+    jmp fim
+
+sair:
+    call mudar_tela
+    jmp fim
+
+fim:
+end INICIO
+;-------------------Fim Inicio-----------------------------------------
