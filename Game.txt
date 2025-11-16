@@ -140,6 +140,8 @@ bloco3_2    db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
 ;--------Tela Inicial Variaveis----------
 nave_x      dw 10
 nave_y      dw 50
+nave_x_prev dw 10       ; posição anterior para detecção de mudança
+nave_y_prev dw 50
 nave_dir    dw 1 ;direita
 
 meteoro_x   dw 300
@@ -174,6 +176,21 @@ bios_last_tick dw 0    ; última contagem baixa (DX) lida via INT 1Ah
 bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
 ;--------Fim Variaveis Fixas-----------------
 
+;------------------ Entidades e Disparos ------------------
+
+;------------------ Fim Entidades -------------------------
+
+;----------------------Terreno Procedural-------------------
+terrain_base_y       dw 199    ; linha de base (y) onde o terreno termina (0..199)
+terrain_surface_color db 14    ; cor da superfície (amarelo)
+terrain_fill_color   db 9     ; cor do preenchimento abaixo da superfície (azul)
+; pequena tabela (64 bytes) com forma triangular para gerar variações (0..31..0)
+sin_tab db  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+    db 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    db 31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16
+    db 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
+;----------------------Fim Terreno-------------------
+
 .CODE  
 
 ;---------------Escreve String-----------------
@@ -195,6 +212,94 @@ escreve_string proc
     ret
 endp
 ;---------------Fim Escreve String-----------------
+
+;---------------Terreno Procedural (gerador por coluna)-----------------
+; Entrada: DX = scroll_offset (0..large)
+; Gera uma superfície usando duas camadas da tabela `sin_tab` e preenche verticalmente
+render_terreno_gen proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+    push bp
+
+    mov ax, 0A000h
+    mov es, ax
+
+    mov bp, dx          ; BP = scroll offset (entrada)
+    xor bx, bx          ; BX = screen x (0..319)
+    mov si, 320         ; SI = columns remaining
+
+.col_loop:
+    mov ax, bx
+    add ax, bp          ; AX = global_x
+
+    ; idx1 = global_x & 63
+    mov cx, ax
+    and cx, 63
+    mov di, OFFSET sin_tab
+    add di, cx
+    mov al, [di]
+
+    ; idx2 = (global_x >> 2) & 63
+    mov cx, ax
+    shr cx, 2
+    and cx, 63
+    mov di, OFFSET sin_tab
+    add di, cx
+    mov dl, [di]
+
+    add al, dl
+    shr al, 1           ; average
+    add al, al          ; scale (amplitude)
+    mov ah, 0           ; AX = offset (0..~62)
+
+    ; surface_y = terrain_base_y - AX
+    mov cx, [terrain_base_y]
+    sub cx, ax          ; CX = surface_y
+
+    ; DI = surface_y * 320 + screen_x
+    mov ax, cx
+    mov dx, 320
+    mul dx               ; DX:AX = AX*320
+    mov di, ax
+    add di, bx
+
+    ; pixel de superfície
+    mov al, [terrain_surface_color]
+    mov es:[di], al
+
+    ; preenche abaixo com fill_color
+    add di, 320
+    mov dx, [terrain_base_y]
+    sub dx, cx           ; DX = número de linhas abaixo (inclui superfície já escrita)
+    mov al, [terrain_fill_color]
+    cmp dx, 0
+    je .skip_fill
+.fill_loop:
+    mov es:[di], al
+    add di, 320
+    dec dx
+    jnz .fill_loop
+.skip_fill:
+
+    inc bx               ; próxima coluna na tela
+    dec si
+    jnz .col_loop
+
+    pop bp
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim Terreno Procedural-----------------
+
 
 ;---------------Converte pontuacao para "00000"-----------------
 ; Entrada:  usa [pontuacao]
@@ -397,6 +502,9 @@ timer_tick proc
 
     ; 1 segundo passou (18 ticks)
     mov byte ptr [bios_tick_acc], 0
+    ; concede 10 pontos por segundo ativo
+    add word ptr [pontuacao], 10
+
     mov ax, [tempo_segundos]
     cmp ax, 0
     je .no_change
@@ -497,12 +605,15 @@ desenha_vidas proc
     push dx
     push si
     push di
-    mov ax, 139      ; start_x em pixels (calculated center)
-    mov si, ax
-    mov dx, 2        ; y
-    mov cx, 3        ; desenhar 3 ícones
+    mov ax, [vidas_start_x]
+    mov si, ax        ; start_x
+    mov dx, 2         ; y
+    mov cl, [vidas]   ; desenhar somente vidas ativas
+    mov cx, cx        ; extend CL to CX for loop
 
 .draw_loop_fixed:
+    cmp cx, 0
+    je .fim
     push cx
     mov bx, OFFSET nave_menu
     mov cx, si       ; x em CX (pinta_7x19 espera CX=x)
@@ -512,7 +623,8 @@ desenha_vidas proc
 
     ; avança X: largura 19 + gap 5 = 24
     add si, 24
-    loop .draw_loop_fixed
+    dec cx
+    jmp .draw_loop_fixed
 
 .fim:
     pop di
@@ -1233,6 +1345,10 @@ jogo:
     ; volta para tela de jogo limpa e desenha barra de status
     call mudar_tela
 
+    ; desenha terreno procedural (scroll = 0)
+    xor dx, dx
+    call render_terreno_gen
+
     ; zera pontuação e inicializa temporizador
     mov word ptr [pontuacao], 0
     mov ax, [tempo_fase]
@@ -1253,12 +1369,12 @@ loop_jogo:
     ; checa ESC para sair
     mov ah, 01h
     int 16h
-    jz .no_key
+    jz .no_key2
     mov ah, 00h
     int 16h
     cmp al, 27
     je sair
-.no_key:
+.no_key2:
 
     ; atraso de frame simples
     mov cx, 30000
