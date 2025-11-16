@@ -39,6 +39,16 @@ mensagem_vitoria db " __   _____ _  _  ___ ___ ___   ___  ___ _ "
                  db "   \_/ |___|_|\_|\___|___|___/ \___/|_|_(_)"      
 ;----------------------FIM Desenhos Strings-------------------        
 
+;----------------------HUD / Score-------------------
+score_label   db "SCORE:",0       ; rótulo mostrado em branco
+score_digits  db "00000",0        ; buffer para 5 dígitos com zero à esquerda
+;----------------------FIM HUD / Score-------------------
+
+;----------------------HUD / Timer-------------------
+time_label    db "TIME:",0        ; rótulo do cronômetro
+time_digits   db "00:00",0        ; MM:SS
+;----------------------FIM HUD / Timer-------------------
+
 ;----------------------Desenhos Numeros-------------------
 jogar1      db 32,32,32,32,218,196,196,196,196,196,196,196,191,32,32,32,32,0  ;19x3
 jogar2      db 32,32,32,32,179,32,74,79,71,65,82,32,179,0
@@ -153,6 +163,15 @@ tela_atual db 0 ;tela atual (menu ou jogo)
 tempo_asteroide dw 0 ;contador de tempo para gerar asteroides
 nave_pos    dw 160 ;posicoes x e y da nave
             dw 100
+;--- HUD Timer vars ---
+tempo_segundos dw 0    ; tempo restante em segundos
+frame_counter  db 0    ; acumula 60 frames -> 1 segundo
+vidas          db 3    ; vidas exibidas ao centro (0..3)
+vidas_start_x  dw 126  ; ponto inicial para 3 ícones centralizados
+vidas_gap      db 24   ; 19 (largura) + 5 de espaçamento
+; BIOS tick helper
+bios_last_tick dw 0    ; última contagem baixa (DX) lida via INT 1Ah
+bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
 ;--------Fim Variaveis Fixas-----------------
 
 .CODE  
@@ -176,6 +195,413 @@ escreve_string proc
     ret
 endp
 ;---------------Fim Escreve String-----------------
+
+;---------------Converte pontuacao para "00000"-----------------
+; Entrada:  usa [pontuacao]
+; Saída:    escreve 5 dígitos ASCII em 'score_digits'
+score_to_str proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+
+    mov ax, [pontuacao]
+    mov bx, 10
+    mov cx, 5
+    mov si, OFFSET score_digits
+    add si, 4              ; começa do último dígito
+
+conv_loop:
+    xor dx, dx
+    div bx                 ; AX = AX/10 ; DX = AX%10
+    add dl, '0'
+    mov [si], dl
+    dec si
+    loop conv_loop
+
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim conversão score-----------------
+
+;---------------Desenha HUD do Score-----------------
+; Mostra: "SCORE:" (branco) e os 5 dígitos (verde)
+; Posição padrão: linha 0, coluna 1 (número inicia na coluna 8)
+desenha_score proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    ; atualiza buffer de dígitos
+    call score_to_str
+
+    ; rótulo em branco
+    mov bl, 0Fh           ; branco
+    mov dl, 1             ; coluna
+    mov dh, 0             ; linha
+    mov cx, 6             ; "SCORE:"
+    mov bp, OFFSET score_label
+    call escreve_string
+
+    ; número em verde brilhante
+    mov bl, 0Ah           ; verde claro
+    mov dl, 8             ; após "SCORE:" e um espaço
+    mov dh, 0
+    mov cx, 5
+    mov bp, OFFSET score_digits
+    call escreve_string
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim HUD Score-----------------
+
+;---------------Converte segundos para "MM:SS"-----------------
+; Usa: tempo_segundos
+; Sai: time_digits = MM:SS (2 dígitos por campo)
+tempo_to_str proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    ; AX = segundos totais
+    mov ax, [tempo_segundos]
+
+    ; divide por 60 -> AX = minutos, DX = segundos
+    xor dx, dx
+    mov bx, 60
+    div bx
+    ; AX = minutos, DX = segundos
+
+    ; limita minutos em 99
+    cmp ax, 99
+    jle .mins_ok
+    mov ax, 99
+.mins_ok:
+
+    ; escreve minutos em time_digits[0..1]
+    push dx                ; guarda os segundos
+    mov bx, 10
+    xor dx, dx
+    div bx                 ; AX/10 -> AX=dezenas (AX), DX=unidades
+    mov si, OFFSET time_digits
+    mov bl, al             ; dezenas em AL -> BL
+    add bl, '0'
+    mov [si+0], bl
+    mov bl, dl             ; unidades em DL -> BL
+    add bl, '0'
+    mov [si+1], bl
+    pop dx                 ; restaura segundos
+
+    ; garante ':'
+    mov byte ptr [si+2], ':'
+
+    ; escreve segundos em time_digits[3..4]
+    mov ax, dx             ; AX = seg (0..59)
+    mov bx, 10
+    xor dx, dx
+    div bx                 ; AX=dezenas, DX=unidades
+    mov bl, al             ; dezenas de segundos
+    add bl, '0'
+    mov [si+3], bl
+    mov bl, dl             ; unidades de segundos
+    add bl, '0'
+    mov [si+4], bl
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim conversão tempo-----------------
+
+;---------------Desenha HUD do Tempo-----------------
+desenha_tempo proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    call tempo_to_str
+
+    ; rótulo (branco)
+    mov bl, 0Fh
+    mov dl, 28            ; coluna mais à direita
+    mov dh, 0             ; linha
+    mov cx, 5
+    mov bp, OFFSET time_label
+    call escreve_string
+
+    ; valor (ciano claro)
+    mov bl, 0Bh
+    mov dl, 34            ; próximo da borda direita (40 colunas totais)
+    mov dh, 0
+    mov cx, 5
+    mov bp, OFFSET time_digits
+    call escreve_string
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim HUD Tempo-----------------
+
+;---------------Tick do temporizador (60 frames = 1s)-------
+timer_tick proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+
+    ; lê ticks BIOS (CX:DX)
+    mov ah, 00h
+    int 1Ah
+    ; DX = low ticks (increments ~18.2Hz)
+
+    mov si, dx
+    ; compara com último
+    mov ax, [bios_last_tick]
+    cmp si, ax
+    je .no_change
+
+    ; houve um tick novo
+    mov [bios_last_tick], si
+    ; incrementa acumulador
+    mov al, [bios_tick_acc]
+    inc al
+    mov [bios_tick_acc], al
+    cmp al, 18
+    jb .no_change
+
+    ; 1 segundo passou (18 ticks)
+    mov byte ptr [bios_tick_acc], 0
+    mov ax, [tempo_segundos]
+    cmp ax, 0
+    je .no_change
+    dec ax
+    mov [tempo_segundos], ax
+    call desenha_tempo
+
+.no_change:
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim Tick do temporizador---------------------
+
+;---------------Pinta sprite 7x19 (nave_menu)---------------
+; Entrada:
+;   BX = OFFSET sprite (nave_menu)
+;   CX = x
+;   DX = y
+pinta_7x19 proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    mov si, bx
+    mov ax, dx
+    mov bx, 320
+    mul bx
+    add ax, cx
+    mov di, ax
+
+    mov dx, 7              ; altura
+
+p7_linha:
+    mov cx, 19             ; largura
+p7_coluna:
+    mov al, [si]
+    mov es:[di], al
+    inc si
+    inc di
+    loop p7_coluna
+
+    add di, 320-19
+    dec dx
+    jnz p7_linha
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim pinta 7x19-------------------------------
+
+;---------------Limpa faixa superior (status bar)------------
+; Limpa y=0..15 (16px) em toda a largura (320)
+limpa_barra_status proc
+    push ax
+    push bx
+    push cx
+    push di
+
+    xor ax, ax            ; AL=0 cor preta
+    xor di, di            ; início VRAM
+    mov bx, 16            ; 16 linhas
+lb_linha:
+    mov cx, 320
+lb_col:
+    mov es:[di], al
+    inc di
+    loop lb_col
+    ; próxima linha
+    ; já incrementamos 320, então nada a somar aqui
+    dec bx
+    jnz lb_linha
+
+    pop di
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim limpeza barra----------------------------
+
+;---------------Desenha vidas (3 ícones no centro)-----------
+desenha_vidas proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+    mov ax, 139      ; start_x em pixels (calculated center)
+    mov si, ax
+    mov dx, 2        ; y
+    mov cx, 3        ; desenhar 3 ícones
+
+.draw_loop_fixed:
+    push cx
+    mov bx, OFFSET nave_menu
+    mov cx, si       ; x em CX (pinta_7x19 espera CX=x)
+    mov dx, 2
+    call pinta_7x19
+    pop cx
+
+    ; avança X: largura 19 + gap 5 = 24
+    add si, 24
+    loop .draw_loop_fixed
+
+.fim:
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+
+;---------------Delay em segundos (BIOS tick 18.2Hz)---------
+; Entrada: AL = segundos (0..255)
+delay_segundos proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+    push bp
+
+    ; delta = seconds * 18 (ticks per second)
+    xor ah, ah
+    mov bl, al
+    mov ax, 18
+    mul bl            ; DX:AX = 18 * seconds
+    mov bx, ax        ; BX = delta_lo (fits in 16-bit)
+
+    ; read start ticks -> CX = start_hi, DX = start_lo
+    mov ah, 00h
+    int 1Ah
+    mov si, cx        ; SI = start_hi
+    mov di, dx        ; DI = start_lo
+
+    ; compute target = start + delta
+    mov ax, di        ; AX = start_lo
+    add ax, bx        ; AX = target_lo (CF set if overflow)
+    mov di, ax        ; DI = target_lo
+    mov ax, si        ; AX = start_hi
+    adc ax, 0         ; AX = target_hi (add carry)
+    mov bp, ax        ; BP = target_hi
+
+.wait_loop:
+    mov ah, 00h
+    int 1Ah            ; CX = cur_hi, DX = cur_lo
+    cmp cx, bp
+    ja  .done_wait
+    jb  .wait_loop
+    ; equal high -> compare low
+    cmp dx, di
+    jae .done_wait
+    jmp .wait_loop
+
+.done_wait:
+    pop bp
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim delay-------------------------------
+
+;---------------Desenha barra de status completa---------
+desenha_status_bar proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    call limpa_barra_status
+    call desenha_score
+    call desenha_vidas
+    call desenha_tempo
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+;---------------Fim desenha_status_bar------------------
 
 ;------------------Pinta Pixel--------------------
 pinta_pixel proc
@@ -729,6 +1155,25 @@ desenha_fase1 proc
 endp
 ;-------------------Fim Desenha Fase 1 -----------------------
 
+;-------------------Atualiza e redesenha Score----------------
+; Exemplo simples para somar N pontos e redesenhar
+; Entrada: AX = pontos a adicionar (opcional). Se não quiser somar, passe AX=0
+atualiza_score proc
+    push ax
+    push dx
+
+    cmp ax, 0
+    je .skip_add
+    add [pontuacao], ax
+.skip_add:
+    call desenha_score
+
+    pop dx
+    pop ax
+    ret
+endp
+;-------------------Fim Atualiza Score------------------------
+
 ;-------------------Inicio-----------------------------------------
 INICIO:
     INICIO:
@@ -780,6 +1225,53 @@ delay_lp:
 jogo:
     call mudar_tela
     call desenha_fase1
+
+    ; espera 4 segundos na tela da fase
+    mov al, 4
+    call delay_segundos
+
+    ; volta para tela de jogo limpa e desenha barra de status
+    call mudar_tela
+
+    ; zera pontuação e inicializa temporizador
+    mov word ptr [pontuacao], 0
+    mov ax, [tempo_fase]
+    xor dx, dx
+    mov bx, 60
+    div bx
+    mov [tempo_segundos], ax
+    mov byte ptr [frame_counter], 0
+    ; inicializa ticks BIOS tracking
+    mov ah, 00h
+    int 1Ah
+    mov [bios_last_tick], dx
+    mov byte ptr [bios_tick_acc], 0
+
+    call desenha_status_bar
+
+loop_jogo:
+    ; checa ESC para sair
+    mov ah, 01h
+    int 16h
+    jz .no_key
+    mov ah, 00h
+    int 16h
+    cmp al, 27
+    je sair
+.no_key:
+
+    ; atraso de frame simples
+    mov cx, 30000
+._delay:
+    loop ._delay
+
+    ; avança timer (60 frames = 1s)
+    call timer_tick
+
+    ; quando tempo chegar a zero, encerra
+    mov ax, [tempo_segundos]
+    cmp ax, 0
+    jne loop_jogo
     jmp fim
 
 sair:
