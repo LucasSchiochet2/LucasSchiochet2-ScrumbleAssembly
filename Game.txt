@@ -28,10 +28,10 @@ fase3_2          db " |   __|  _  |   __|   __|  |_  |"
 fase3_3          db " |   __|     |__   |   __|  |_  |"
 fase3_4          db " |__|  |__|__|_____|_____|  |___|"
 
-mensagem_derrota db "   ___   _   __  __ ___    _____   _____ ___  "   
-                 db "  / __| /_\ |  \/  | __|  / _ \ \ / / __| _ \ "
-                 db " | (_ |/ _ \| |\/| | _|  | (_) \ V /| _||   / "
-                 db "  \___/_/ \_\_|  |_|___|  \___/ \_/ |___|_|_\ "
+mensagem_derrota1 db "  ___   _   _  _ ___  _____   _____ ___ "   
+mensagem_derrota2 db " / __| /_\ | \/ | __|/ _ \ \ / / __| _ \"
+mensagem_derrota3 db "| (_ |/ _ \||\/|| _|| (_) \ V /| _||   /"
+mensagem_derrota4 db " \___/_/ \_\|  ||___|\___/ \_/ |___|_|_\"
                  
 mensagem_vitoria db " __   _____ _  _  ___ ___ ___   ___  ___ _ "
                  db " \ \ / / __| \| |/ __| __|   \ / _ \| _ \ |"   
@@ -159,7 +159,7 @@ opcao_menu     dw 0    ; 0 = jogar, 1 = sair
 frame_time dw 16667 ;tempo em microsegundos que cada frame dura
 pontuacao dw 0 ;tempo percorrido na fase
 fase db 1 ; define o numero da fase
-tempo_fase dw 1800 ;define o tempo de duracao (em frames) da fase
+tempo_fase dw 3600 ;define o tempo de duracao (em frames) da fase - 60 segundos
 seed dw 0 ;valor chave usado para gerar o numero aleatorio   
 tela_atual db 0 ;tela atual (menu ou jogo)
 tempo_asteroide dw 0 ;contador de tempo para gerar asteroides
@@ -174,8 +174,11 @@ max_inimigos dw 10            ; numero maximo de inimigos simultaneos
 num_inimigos dw 0             ; numero atual de inimigos na tela
 gen_time     dw 60            ; intervalo de frames para gerar novos inimigos
 tempo_inimigo dw 0            ; contador de tempo para gerar inimigos
-nave_defesa  db 0             ; flag de escudo da nave (0=sem escudo, 1=com escudo)
 nave_vida    db 3             ; vidas da nave
+;--- Terreno Scroll vars ---
+terrain_offset dw 0           ; offset horizontal do terreno (0-479)
+terrain_speed  db 1           ; velocidade de movimento do terreno
+terrain_width  dw 480         ; largura total do terreno (maior que tela)
 ;--- HUD Timer vars ---
 tempo_segundos dw 0    ; tempo restante em segundos
 frame_counter  db 0    ; acumula 60 frames -> 1 segundo
@@ -192,14 +195,14 @@ bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
 ;------------------ Fim Entidades -------------------------
 
 ;----------------------Terreno Procedural-------------------
-terrain_base_y       dw 199    ; linha de base (y) onde o terreno termina (0..199)
+terrain_base_y       dw 160     ; linha de base (y) elevada - terreno alto na tela
 terrain_surface_color db 14    ; cor da superfície (amarelo)
 terrain_fill_color   db 9     ; cor do preenchimento abaixo da superfície (azul)
-; pequena tabela (64 bytes) com forma triangular para gerar variações (0..31..0)
-sin_tab db  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-    db 16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
-    db 31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16
-    db 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0
+; pequena tabela (64 bytes) com forma triangular suave para gerar variações menores (0..7..0)
+sin_tab db  0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7
+    db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
+    db 0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7
+    db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
 ;----------------------Fim Terreno-------------------
 
 .CODE  
@@ -263,9 +266,9 @@ render_terreno_gen proc
     mov dl, [di]
 
     add al, dl
-    shr al, 1           ; average
-    add al, al          ; scale (amplitude)
-    mov ah, 0           ; AX = offset (0..~62)
+    shr al, 1           ; average normal
+    add al, al          ; escalonamento para amplitude visível
+    mov ah, 0           ; AX = offset (0..~60)
 
     ; surface_y = terrain_base_y - AX
     mov cx, [terrain_base_y]
@@ -288,13 +291,28 @@ render_terreno_gen proc
     sub dx, cx           ; DX = número de linhas abaixo (inclui superfície já escrita)
     mov al, [terrain_fill_color]
     cmp dx, 0
-    je .skip_fill
+    je .force_blue_fill
 .fill_loop:
     mov es:[di], al
     add di, 320
     dec dx
     jnz .fill_loop
-.skip_fill:
+
+.force_blue_fill:
+    ; sempre preenche de azul de y=160 até y=200
+    mov ax, 161         ; linha inicial
+    mov dx, 320
+    mul dx               ; AX = 161 * 320
+    add ax, bx           ; AX += coluna atual
+    mov di, ax           ; DI = posição y=160
+    
+    mov cx, 40           ; 40 linhas (160 até 199)
+    mov al, [terrain_fill_color]  ; cor azul
+.blue_loop:
+    mov es:[di], al
+    add di, 320
+    dec cx
+    jnz .blue_loop
 
     inc bx               ; próxima coluna na tela
     dec si
@@ -1265,9 +1283,7 @@ continue:
     jmp next                    ;muda para o proximo no vetor
 
 colide_player:
-    cmp byte ptr [nave_defesa], 1          ;se o player esta com o escudo
-    je destroi_inimigo_sem_pontos  ;so destroi o inimigo (sem pontos por colisao)
-    dec byte ptr [nave_vida]               ;senao, reduz a vida da nave
+    dec byte ptr [nave_vida]               ;reduz a vida da nave
     call pinta_vida             ;pinta a nova vida
     jmp destroi_inimigo_sem_pontos  ;e destroi o inimigo (sem pontos por colisao)
 
@@ -1466,6 +1482,69 @@ pinta_vida proc
     ret
 endp
 
+;---------------Verifica Colisao com Terreno---------------
+verifica_colisao_terreno proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+    
+    ; calcula a posição Y do terreno na posição X da nave
+    mov bx, [nave_pos]      ; x da nave
+    
+    ; usa mesma lógica do render_terreno_gen para calcular altura do terreno
+    mov ax, bx              ; global_x = nave_pos_x
+    
+    ; idx1 = global_x & 63
+    mov cx, ax
+    and cx, 63
+    mov di, OFFSET sin_tab
+    add di, cx
+    mov al, [di]
+
+    ; idx2 = (global_x >> 2) & 63
+    mov cx, ax
+    shr cx, 2
+    and cx, 63
+    mov di, OFFSET sin_tab
+    add di, cx
+    mov dl, [di]
+
+    add al, dl
+    shr al, 1           ; average normal
+    add al, al          ; escalonamento para amplitude visível
+    mov ah, 0           ; AX = offset (0..~60)
+
+    ; surface_y = terrain_base_y - AX
+    mov cx, [terrain_base_y]
+    sub cx, ax          ; CX = altura do terreno nesta posição
+    
+    ; verifica se a parte inferior da nave (nave_y + 13) toca o terreno
+    mov ax, [nave_pos+2]    ; y da nave
+    add ax, 13              ; + altura da nave
+    cmp ax, cx              ; compara com altura do terreno
+    jl .sem_colisao         ; se nave está acima do terreno, ok
+    
+    ; colidiu com terreno - perde vida
+    dec byte ptr [nave_vida]
+    call pinta_vida
+    
+    ; reposiciona nave acima do terreno com margem de segurança
+    sub cx, 15              ; margem de segurança
+    mov [nave_pos+2], cx
+    
+.sem_colisao:
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+endp
+
 ;-------------------Fim Dar tiro------------------------------------
 
 ;-------------------Alterar Opção Menu---------------------------
@@ -1579,6 +1658,7 @@ verifica_tecla_jogo proc
     mov SI, 1               ;direção baixo (1)
     call move_vertical      ;apaga linha superior
     inc [nave_pos+2]        ;incrementa uma posicao 
+    call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave
     jmp nao_jogada          ;pula para o final
 not_down: 
@@ -1591,6 +1671,7 @@ not_down:
     mov SI, 0               ;direção cima (0)
     call move_vertical      ;apaga linha inferior
     dec [nave_pos+2]        ;decrementa posicao y da nave
+    call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave
     jmp nao_jogada          ;pula para o final
 nao_jogada1:
@@ -1605,6 +1686,7 @@ not_up:
     mov SI, 0               ;direcao esquerda (0)
     call move_horizontal    ;apaga coluna da direita
     dec [nave_pos]          ;decrementa posicao x da nave
+    call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave       ;redesenha a nave
     jmp nao_jogada          ;pula para o final
 not_left:
@@ -1617,6 +1699,7 @@ not_left:
     mov SI, 1               ;direcao direita (1)
     call move_horizontal    ;apaga coluna da esquerda
     inc [nave_pos]          ;incrementa posicao x da nave
+    call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave       ;redesenha a nave
     jmp nao_jogada          ;pula para o final
 tiro:
@@ -1795,6 +1878,41 @@ desenha_fase1 proc
 endp
 ;-------------------Fim Desenha Fase 1 -----------------------
 
+;-------------------Desenha Game Over -----------------------
+desenha_game_over proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    mov bl, 04h                   ;cor do titulo
+    mov dh,4
+    mov dl,0
+    mov cx, 40
+    mov bp,OFFSET mensagem_derrota1
+    call escreve_string
+    mov dh,5
+    mov bp,OFFSET mensagem_derrota2
+    call escreve_string
+    mov dh,6
+    mov bp,OFFSET mensagem_derrota3
+    call escreve_string
+    mov dh,7
+    mov bp,OFFSET mensagem_derrota4
+    call escreve_string
+    mov dh,8
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Fim Desenha Fase 1 -----------------------
+
 ;-------------------Atualiza e redesenha Score----------------
 ; Exemplo simples para somar N pontos e redesenhar
 ; Entrada: AX = pontos a adicionar (opcional). Se não quiser somar, passe AX=0
@@ -1934,6 +2052,7 @@ loop_jogo:
 
 sair:
     call mudar_tela
+    call desenha_game_over
     jmp fim
 
 fim:
