@@ -17,11 +17,11 @@ fase1_4          db "|  __/ /\ \  \___ \|  __|    | |"
 fase1_5          db "| | / ____ \ ____) | |____   | |"
 fase1_6          db "|_|/_/    \_\_____/|______|  |_|"
                                 
-fase2_1          db "     _________   _____ ______   ___ " 
-fase2_2          db "    / ____/   | / ___// ____/  |__ \"
-fase2_3          db "   / /_  / /| | \__ \/ __/     __/ /"
-fase2_4          db "  / __/ / ___ |___/ / /___    / __/ "
-fase2_5          db " /_/   /_/  |_/____/_____/   /____/ "
+fase2_1          db "    _________   _____ ______   ___ " ;35x4
+fase2_2          db "   / ____/   | / ___// ____/  |__ \"
+fase2_3          db "  / /_  / /| | \__ \/ __/     __/ /"
+fase2_4          db " / __/ / ___ |___/ / /___    / __/ "
+fase2_5          db "/_/   /_/  |_/____/_____/   /____/ "
                                                                
 fase3_1          db "  _____ _____ _____ _____    ___ " 
 fase3_2          db " |   __|  _  |   __|   __|  |_  |"
@@ -40,12 +40,12 @@ mensagem_vitoria db " __   _____ _  _  ___ ___ ___   ___  ___ _ "
 ;----------------------FIM Desenhos Strings-------------------        
 
 ;----------------------HUD / Score-------------------
-score_label   db "SCORE:",0       ; rótulo mostrado em branco
-score_digits  db "00000",0        ; buffer para 5 dígitos com zero à esquerda
+score_label   db "SCORE:",0       ; rï¿½tulo mostrado em branco
+score_digits  db "00000",0        ; buffer para 5 dï¿½gitos com zero ï¿½ esquerda
 ;----------------------FIM HUD / Score-------------------
 
 ;----------------------HUD / Timer-------------------
-time_label    db "TIME:",0        ; rótulo do cronômetro
+time_label    db "TIME:",0        ; rï¿½tulo do cronï¿½metro
 time_digits   db "00:00",0        ; MM:SS
 ;----------------------FIM HUD / Timer-------------------
 
@@ -140,7 +140,7 @@ bloco3_2    db 11,11,4,4,4,4,4,4,4,4,11,11,11,11,4,4,4,4,4,4,4,4,11,11
 ;--------Tela Inicial Variaveis----------
 nave_x      dw 10
 nave_y      dw 50
-nave_x_prev dw 10       ; posição anterior para detecção de mudança
+nave_x_prev dw 10       ; posiï¿½ï¿½o anterior para detecï¿½ï¿½o de mudanï¿½a
 nave_y_prev dw 50
 nave_dir    dw 1 ;direita
 
@@ -148,7 +148,7 @@ meteoro_x   dw 300
 meteoro_y   dw 70
 meteoro_dir dw 0 ;esquerda
 
-inimigo_x     dw 0        ; será randomizado
+inimigo_x     dw 0        ; serï¿½ randomizado
 inimigo_y     dw 90
 inimigo_dir   dw 0
 
@@ -158,16 +158,24 @@ opcao_menu     dw 0    ; 0 = jogar, 1 = sair
 ;--------Variaveis Fixas Variaveis-----------------
 frame_time dw 16667 ;tempo em microsegundos que cada frame dura
 pontuacao dw 0 ;tempo percorrido na fase
-fase db 1 ; define o numero da fase
-tempo_fase dw 3600 ;define o tempo de duracao (em frames) da fase - 60 segundos
+fase db 0 ; define o numero da fase
+tempo_fase dw 1200 ;define o tempo de duracao (em frames) da fase - 60 segundos
 seed dw 0 ;valor chave usado para gerar o numero aleatorio   
 tela_atual db 0 ;tela atual (menu ou jogo)
-tempo_asteroide dw 0 ;contador de tempo para gerar asteroides
-nave_pos    dw 160 ;posicoes x e y da nave
-            dw 100
-missil_pos  dw 0   ;posicoes x e y do missil
-            dw 0
-missil_exists db 0 ;flag de existencia do missil (0=nao existe, 1=existe)
+
+;--- HUD Timer vars ---
+tempo_segundos dw 0    ; tempo restante em segundos
+frame_counter  db 0    ; acumula 60 frames -> 1 segundo
+vidas          db 3    ; vidas exibidas ao centro (0..3)
+vidas_start_x  dw 126  ; ponto inicial para 3 ï¿½cones centralizados
+vidas_gap      db 24   ; 19 (largura) + 5 de espaï¿½amento
+
+; BIOS tick helper
+bios_last_tick dw 0    ; ï¿½ltima contagem baixa (DX) lida via INT 1Ah
+bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
+;--------Fim Variaveis Fixas-----------------
+
+;------------------ Entidades e Disparos ------------------
 ;--- Sistema de Inimigos ---
 inimigos     dw 30 DUP(0,0,0)  ; array de inimigos: x,y,existe (3 words cada, max 10 inimigos)
 max_inimigos dw 10            ; numero maximo de inimigos simultaneos
@@ -175,35 +183,33 @@ num_inimigos dw 0             ; numero atual de inimigos na tela
 gen_time     dw 60            ; intervalo de frames para gerar novos inimigos
 tempo_inimigo dw 0            ; contador de tempo para gerar inimigos
 nave_vida    db 3             ; vidas da nave
-;--- Terreno Scroll vars ---
-terrain_offset dw 0           ; offset horizontal do terreno (0-479)
-terrain_speed  db 1           ; velocidade de movimento do terreno
-terrain_width  dw 480         ; largura total do terreno (maior que tela)
-;--- HUD Timer vars ---
-tempo_segundos dw 0    ; tempo restante em segundos
-frame_counter  db 0    ; acumula 60 frames -> 1 segundo
-vidas          db 3    ; vidas exibidas ao centro (0..3)
-vidas_start_x  dw 126  ; ponto inicial para 3 ícones centralizados
-vidas_gap      db 24   ; 19 (largura) + 5 de espaçamento
-; BIOS tick helper
-bios_last_tick dw 0    ; última contagem baixa (DX) lida via INT 1Ah
-bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
-;--------Fim Variaveis Fixas-----------------
-
-;------------------ Entidades e Disparos ------------------
-
+nave_pos    dw 160 ;posicoes x e y da nave
+            dw 100
+missil_pos  dw 0   ;posicoes x e y do missil
+            dw 0
+missil_exists db 0 ;flag de existencia do missil (0=nao existe, 1=existe)
 ;------------------ Fim Entidades -------------------------
 
-;----------------------Terreno Procedural-------------------
+;----------------------Terreno Procedural 1-------------------
 terrain_base_y       dw 160     ; linha de base (y) elevada - terreno alto na tela
-terrain_surface_color db 14    ; cor da superfície (amarelo)
-terrain_fill_color   db 9     ; cor do preenchimento abaixo da superfície (azul)
-; pequena tabela (64 bytes) com forma triangular suave para gerar variações menores (0..7..0)
+terrain_surface_color db 14    ; cor da superfï¿½cie (amarelo)
+terrain_fill_color   db 9     ; cor do preenchimento abaixo da superfï¿½cie (azul)
+; pequena tabela (64 bytes) com forma triangular suave para gerar variaï¿½ï¿½es menores (0..7..0)
 sin_tab db  0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7
-    db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
-    db 0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7
-    db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
+        db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
+        db 0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7
+        db 7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0
 ;----------------------Fim Terreno-------------------
+;----------------------Terreno Procedural 2 (Fase 2)-------------------
+terrain_base2_y       dw 160     ; linha de base (y) - terreno mais baixo que fase 1
+terrain_surface2_color db 12     ; cor da superfï¿½cie (vermelho claro)
+terrain_fill2_color   db 4       ; cor do preenchimento abaixo da superfï¿½cie (vermelho escuro)
+; tabela com variaï¿½ï¿½es mais acentuadas para terreno mais acidentado
+sin_tab2    db  0,1,3,5,7,9,11,13,15,17,19,21,23,25,27,29
+            db 31,29,27,25,23,21,19,17,15,13,11,9,7,5,3,1
+            db 0,2,6,10,14,18,22,26,30,26,22,18,14,10,6,2
+            db 0,3,9,15,21,27,30,27,21,15,9,3,0,6,12,18
+;----------------------Fim Terreno Fase 2-------------------
 
 .CODE  
 
@@ -229,7 +235,7 @@ endp
 
 ;---------------Terreno Procedural (gerador por coluna)-----------------
 ; Entrada: DX = scroll_offset (0..large)
-; Gera uma superfície usando duas camadas da tabela `sin_tab` e preenche verticalmente
+; Gera uma superfï¿½cie usando duas camadas da tabela `sin_tab` e preenche verticalmente
 render_terreno_gen proc
     push ax
     push bx
@@ -238,7 +244,16 @@ render_terreno_gen proc
     push si
     push di
     push bp
-
+    cmp fase,2
+    jne continuar
+    mov cl, [terrain_fill2_color]
+    mov [terrain_fill_color], cl
+    mov cx, [terrain_base2_y]
+    mov  [terrain_base_y], cx
+    mov cl, [terrain_surface2_color]
+    mov [terrain_surface_color], cl
+    xor cx, cx
+continuar:
     mov ax, 0A000h
     mov es, ax
 
@@ -267,7 +282,7 @@ render_terreno_gen proc
 
     add al, dl
     shr al, 1           ; average normal
-    add al, al          ; escalonamento para amplitude visível
+    add al, al          ; escalonamento para amplitude visï¿½vel
     mov ah, 0           ; AX = offset (0..~60)
 
     ; surface_y = terrain_base_y - AX
@@ -281,14 +296,14 @@ render_terreno_gen proc
     mov di, ax
     add di, bx
 
-    ; pixel de superfície
+    ; pixel de superfï¿½cie
     mov al, [terrain_surface_color]
     mov es:[di], al
 
     ; preenche abaixo com fill_color
     add di, 320
     mov dx, [terrain_base_y]
-    sub dx, cx           ; DX = número de linhas abaixo (inclui superfície já escrita)
+    sub dx, cx           ; DX = nï¿½mero de linhas abaixo (inclui superfï¿½cie jï¿½ escrita)
     mov al, [terrain_fill_color]
     cmp dx, 0
     je .force_blue_fill
@@ -299,14 +314,14 @@ render_terreno_gen proc
     jnz .fill_loop
 
 .force_blue_fill:
-    ; sempre preenche de azul de y=160 até y=200
+    ; sempre preenche de azul de y=160 atï¿½ y=200
     mov ax, 161         ; linha inicial
     mov dx, 320
     mul dx               ; AX = 161 * 320
     add ax, bx           ; AX += coluna atual
-    mov di, ax           ; DI = posição y=160
+    mov di, ax           ; DI = posiï¿½ï¿½o y=160
     
-    mov cx, 40           ; 40 linhas (160 até 199)
+    mov cx, 40           ; 40 linhas (160 atï¿½ 199)
     mov al, [terrain_fill_color]  ; cor azul
 .blue_loop:
     mov es:[di], al
@@ -314,7 +329,7 @@ render_terreno_gen proc
     dec cx
     jnz .blue_loop
 
-    inc bx               ; próxima coluna na tela
+    inc bx               ; prï¿½xima coluna na tela
     dec si
     jnz .col_loop
 
@@ -332,7 +347,7 @@ endp
 
 ;---------------Converte pontuacao para "00000"-----------------
 ; Entrada:  usa [pontuacao]
-; Saída:    escreve 5 dígitos ASCII em 'score_digits'
+; Saï¿½da:    escreve 5 dï¿½gitos ASCII em 'score_digits'
 score_to_str proc
     push ax
     push bx
@@ -344,7 +359,7 @@ score_to_str proc
     mov bx, 10
     mov cx, 5
     mov si, OFFSET score_digits
-    add si, 4              ; começa do último dígito
+    add si, 4              ; comeï¿½a do ï¿½ltimo dï¿½gito
 
 conv_loop:
     xor dx, dx
@@ -361,11 +376,11 @@ conv_loop:
     pop ax
     ret
 endp
-;---------------Fim conversão score-----------------
+;---------------Fim conversï¿½o score-----------------
 
 ;---------------Desenha HUD do Score-----------------
-; Mostra: "SCORE:" (branco) e os 5 dígitos (verde)
-; Posição padrão: linha 0, coluna 1 (número inicia na coluna 8)
+; Mostra: "SCORE:" (branco) e os 5 dï¿½gitos (verde)
+; Posiï¿½ï¿½o padrï¿½o: linha 0, coluna 1 (nï¿½mero inicia na coluna 8)
 desenha_score proc
     push ax
     push bx
@@ -373,10 +388,10 @@ desenha_score proc
     push dx
     push bp
 
-    ; atualiza buffer de dígitos
+    ; atualiza buffer de dï¿½gitos
     call score_to_str
 
-    ; rótulo em branco
+    ; rï¿½tulo em branco
     mov bl, 0Fh           ; branco
     mov dl, 1             ; coluna
     mov dh, 0             ; linha
@@ -384,9 +399,9 @@ desenha_score proc
     mov bp, OFFSET score_label
     call escreve_string
 
-    ; número em verde brilhante
+    ; nï¿½mero em verde brilhante
     mov bl, 0Ah           ; verde claro
-    mov dl, 8             ; após "SCORE:" e um espaço
+    mov dl, 8             ; apï¿½s "SCORE:" e um espaï¿½o
     mov dh, 0
     mov cx, 5
     mov bp, OFFSET score_digits
@@ -403,7 +418,7 @@ endp
 
 ;---------------Converte segundos para "MM:SS"-----------------
 ; Usa: tempo_segundos
-; Sai: time_digits = MM:SS (2 dígitos por campo)
+; Sai: time_digits = MM:SS (2 dï¿½gitos por campo)
 tempo_to_str proc
     push ax
     push bx
@@ -420,13 +435,6 @@ tempo_to_str proc
     mov bx, 60
     div bx
     ; AX = minutos, DX = segundos
-
-    ; limita minutos em 99
-    cmp ax, 99
-    jle .mins_ok
-    mov ax, 99
-.mins_ok:
-
     ; escreve minutos em time_digits[0..1]
     push dx                ; guarda os segundos
     mov bx, 10
@@ -464,7 +472,7 @@ tempo_to_str proc
     pop ax
     ret
 endp
-;---------------Fim conversão tempo-----------------
+;---------------Fim conversï¿½o tempo-----------------
 
 ;---------------Desenha HUD do Tempo-----------------
 desenha_tempo proc
@@ -476,9 +484,9 @@ desenha_tempo proc
 
     call tempo_to_str
 
-    ; rótulo (branco)
+    ; rï¿½tulo (branco)
     mov bl, 0Fh
-    mov dl, 28            ; coluna mais à direita
+    mov dl, 28            ; coluna mais ï¿½ direita
     mov dh, 0             ; linha
     mov cx, 5
     mov bp, OFFSET time_label
@@ -486,7 +494,7 @@ desenha_tempo proc
 
     ; valor (ciano claro)
     mov bl, 0Bh
-    mov dl, 34            ; próximo da borda direita (40 colunas totais)
+    mov dl, 34            ; prï¿½ximo da borda direita (40 colunas totais)
     mov dh, 0
     mov cx, 5
     mov bp, OFFSET time_digits
@@ -509,13 +517,13 @@ timer_tick proc
     push dx
     push si
 
-    ; lê ticks BIOS (CX:DX)
+    ; lï¿½ ticks BIOS (CX:DX)
     mov ah, 00h
     int 1Ah
     ; DX = low ticks (increments ~18.2Hz)
 
     mov si, dx
-    ; compara com último
+    ; compara com ï¿½ltimo
     mov ax, [bios_last_tick]
     cmp si, ax
     je .no_change
@@ -608,7 +616,7 @@ limpa_barra_status proc
     push di
 
     xor ax, ax            ; AL=0 cor preta
-    xor di, di            ; início VRAM
+    xor di, di            ; inï¿½cio VRAM
     mov bx, 16            ; 16 linhas
 lb_linha:
     mov cx, 320
@@ -616,8 +624,8 @@ lb_col:
     mov es:[di], al
     inc di
     loop lb_col
-    ; próxima linha
-    ; já incrementamos 320, então nada a somar aqui
+    ; prï¿½xima linha
+    ; jï¿½ incrementamos 320, entï¿½o nada a somar aqui
     dec bx
     jnz lb_linha
 
@@ -629,7 +637,7 @@ lb_col:
 endp
 ;---------------Fim limpeza barra----------------------------
 
-;---------------Desenha vidas (3 ícones no centro)-----------
+;---------------Desenha vidas (3 ï¿½cones no centro)-----------
 desenha_vidas proc
     push ax
     push bx
@@ -638,10 +646,10 @@ desenha_vidas proc
     push si
     push di
 
-    ; primeiro limpa toda a área das vidas (3 ícones máximos)
-    mov si, [vidas_start_x]  ; posição inicial
+    ; primeiro limpa toda a ï¿½rea das vidas (3 ï¿½cones mï¿½ximos)
+    mov si, [vidas_start_x]  ; posiï¿½ï¿½o inicial
     mov dx, 2                ; linha y
-    mov bx, 3                ; limpar espaço para 3 vidas
+    mov bx, 3                ; limpar espaï¿½o para 3 vidas
 
 .clear_loop:
     cmp bx, 0
@@ -649,31 +657,31 @@ desenha_vidas proc
     push bx
     push si
     
-    ; limpa área de uma vida (24x9 pixels - área maior para garantir limpeza completa)
+    ; limpa ï¿½rea de uma vida (24x9 pixels - ï¿½rea maior para garantir limpeza completa)
     mov ax, dx               ; y em AX
     mov di, 320
     mul di                   ; AX = y * 320
     add ax, si               ; AX += x
-    mov di, ax               ; DI = posição na VRAM
+    mov di, ax               ; DI = posiï¿½ï¿½o na VRAM
     
     mov ax, 9                ; altura ampliada para garantir limpeza completa
 .clear_linha:
     push ax
-    mov cx, 24               ; largura ampliada (19 + margem de segurança)
+    mov cx, 24               ; largura ampliada (19 + margem de seguranï¿½a)
     xor al, al               ; cor preta
 .clear_coluna:
     mov es:[di], al
     inc di
     loop .clear_coluna
     
-    add di, 320-24           ; próxima linha (ajustado para nova largura)
+    add di, 320-24           ; prï¿½xima linha (ajustado para nova largura)
     pop ax
     dec ax
     jnz .clear_linha
     
     pop si
     pop bx
-    add si, 24               ; próxima posição (largura + gap)
+    add si, 24               ; prï¿½xima posiï¿½ï¿½o (largura + gap)
     dec bx
     jmp .clear_loop
 
@@ -695,7 +703,7 @@ desenha_vidas proc
     call pinta_7x19
     pop cx
 
-    ; avança X: largura 19 + gap 5 = 24
+    ; avanï¿½a X: largura 19 + gap 5 = 24
     add si, 24
     dec cx
     jmp .draw_loop_fixed
@@ -858,7 +866,7 @@ apagar_sprite_13x29 proc
     ; recebe:
     ;   CX = x
     ;   DX = y
-    ;   SI = OFFSET sprite (só para manter padrão, mas não usado)
+    ;   SI = OFFSET sprite (sï¿½ para manter padrï¿½o, mas nï¿½o usado)
 
     push ax
     push bx
@@ -870,7 +878,7 @@ apagar_sprite_13x29 proc
     mov bx, 320
     mul bx
     add ax, cx
-    mov di, ax            ; início do sprite na VRAM
+    mov di, ax            ; inï¿½cio do sprite na VRAM
 
     mov bx, 13            ; altura
 linha_apagar:
@@ -881,7 +889,7 @@ apaga_coluna:
     inc di
     loop apaga_coluna
 
-    add di, 320 - 29      ; próxima linha
+    add di, 320 - 29      ; prï¿½xima linha
     dec bx
     jnz linha_apagar
 
@@ -895,8 +903,8 @@ endp
 
 desenha_nave proc
     mov BX, OFFSET nave     ;sprite da nave
-    mov CX, [nave_pos]      ;posição X
-    mov DX, [nave_pos+2]    ;posição Y
+    mov CX, [nave_pos]      ;posiï¿½ï¿½o X
+    mov DX, [nave_pos+2]    ;posiï¿½ï¿½o Y
     call pinta_13X29
     ret
 endp
@@ -905,7 +913,7 @@ endp
 ;---------------Muda de Tela--------------------
 mudar_tela proc
    
-    mov CX, 57600       ;seleciona valor limite na tela
+    mov CX, 64000     ;seleciona valor limite na tela
 pinta_preto:
     mov SI, CX          ;passa valor do contador para SI
     mov WORD PTR ES:[SI], 0      ;pinta de preto
@@ -915,13 +923,13 @@ pinta_preto:
 endp
 ;---------------Fim Muda de Tela--------------------
 
-;---------------Movimentação------------------------
+;---------------Movimentaï¿½ï¿½o------------------------
 ; move_vertical
 ; - apaga uma linha horizontal inteira do sprite (29 pixels de largura)
 ; Entrada:
 ;   CX = x atual
 ;   DX = y atual
-;   SI = direção (0 = cima, 1 = baixo) - determina qual linha apagar
+;   SI = direï¿½ï¿½o (0 = cima, 1 = baixo) - determina qual linha apagar
 move_vertical proc
     push ax
     push bx
@@ -948,7 +956,7 @@ prepara_v:
     mov di, 320
     mul di             ; AX = linha * 320
     add ax, cx         ; AX += coluna inicial
-    mov di, ax         ; DI = endereço inicial na VRAM (ES:DI)
+    mov di, ax         ; DI = endereï¿½o inicial na VRAM (ES:DI)
 
     ; limpa horizontalmente 29 pixels (largura do sprite)
     mov cx, 29
@@ -970,11 +978,11 @@ clear_loop_v:
 endp
 
 ; move_horizontal
-; - escreve 13 pixels verticalmente com MOV/ADD (sem multiplicações por pixel)
+; - escreve 13 pixels verticalmente com MOV/ADD (sem multiplicaï¿½ï¿½es por pixel)
 ; Entrada:
 ;   CX = x atual
 ;   DX = y atual
-;   SI = direção (0 = esquerda, 1 = direita)
+;   SI = direï¿½ï¿½o (0 = esquerda, 1 = direita)
 move_horizontal proc
     push ax
     push bx
@@ -1001,9 +1009,9 @@ prepara:
     mov di, 320
     mul di             ; AX = y * 320
     add ax, bx         ; AX += coluna
-    mov di, ax         ; DI = endereço inicial na VRAM (ES:DI)
+    mov di, ax         ; DI = endereï¿½o inicial na VRAM (ES:DI)
 
-    ; limpa verticalmente 13 pixels (escreve AL=0 e soma 320 para próxima linha)
+    ; limpa verticalmente 13 pixels (escreve AL=0 e soma 320 para prï¿½xima linha)
     mov cx, 13
     xor al, al
 
@@ -1021,7 +1029,7 @@ clear_loop:
     pop ax
     ret
 endp
-;------------------Fim Movimentação------------------------
+;------------------Fim Movimentaï¿½ï¿½o------------------------
 
 
 ;-------------------Incio Video-----------------------------
@@ -1033,7 +1041,7 @@ inicia_video proc
 endp
 ;-------------------Fim Incio Video-----------------------------
 
-;-------------------Movimentação na Tela Incial-----------------
+;-------------------Movimentaï¿½ï¿½o na Tela Incial-----------------
 movimento_tela_inicial proc
     push ax
     push bx
@@ -1042,10 +1050,10 @@ movimento_tela_inicial proc
     push si
     push di
 ; 1) NAVE ALIADA
-    ; apagar coluna antiga (direção = direita)
+    ; apagar coluna antiga (direï¿½ï¿½o = direita)
     mov cx, [nave_x]
     mov dx, [nave_y]
-    mov si, 1              ; 1 = direita (move_horizontal usa SI como direção)
+    mov si, 1              ; 1 = direita (move_horizontal usa SI como direï¿½ï¿½o)
     call move_horizontal
 
     ; atualizar X
@@ -1054,21 +1062,21 @@ movimento_tela_inicial proc
     cmp ax, 320
     jl .ali_ok
 
-    ; apagar sprite inteiro ANTES de resetar posição
+    ; apagar sprite inteiro ANTES de resetar posiï¿½ï¿½o
     mov cx, [nave_x]
     mov dx, [nave_y]
     mov si, OFFSET nave
     call apagar_sprite_13x29
-    mov ax, 0     ; reaparece à esquerda
+    mov ax, 0     ; reaparece ï¿½ esquerda
 .ali_ok:
     mov [nave_x], ax
-    ; desenhar nova posição
+    ; desenhar nova posiï¿½ï¿½o
     mov bx, offset nave
     mov cx, [nave_x]
     mov dx, [nave_y]
     call pinta_13X29
 ; 2) METEORO
-    ; apagar coluna antiga (direção = esquerda)
+    ; apagar coluna antiga (direï¿½ï¿½o = esquerda)
     mov cx, [meteoro_x]
     mov dx, [meteoro_y]
     mov si, 0              ; 0 = esquerda
@@ -1083,10 +1091,10 @@ movimento_tela_inicial proc
     mov dx, [meteoro_y]
     mov si, OFFSET meteoro
     call apagar_sprite_13x29
-    mov ax, 320          ; reaparece à direita
+    mov ax, 320          ; reaparece ï¿½ direita
 .met_ok:
     mov [meteoro_x], ax
-    ; desenhar nova posição
+    ; desenhar nova posiï¿½ï¿½o
     mov bx, offset meteoro
     mov cx, [meteoro_x]
     mov dx, [meteoro_y]
@@ -1100,7 +1108,7 @@ movimento_tela_inicial proc
 
     ; atualizar X com ping-pong
     mov ax, [inimigo_x]
-    mov bx, [inimigo_dir]    ; bx = direção
+    mov bx, [inimigo_dir]    ; bx = direï¿½ï¿½o
     cmp bx, 0
     jne .inimigo_dir_right
 
@@ -1133,7 +1141,7 @@ movimento_tela_inicial proc
     pop ax
     ret
 endp
-;-------------------Movimentação na Tela Incial-----------------
+;-------------------Movimentaï¿½ï¿½o na Tela Incial-----------------
 
 ;-------------------Gerar Inimigos------------------------------
 gera_inimigo proc
@@ -1337,7 +1345,7 @@ endp
 ;-------------------Fim Gerar Inimigos------------------------------
 
 ;-------------------Dar tiro------------------------------------
-;---------------Gerar Míssil (pixel branco)---------------
+;---------------Gerar Mï¿½ssil (pixel branco)---------------
 gera_missil proc
     push ax
     push cx
@@ -1346,7 +1354,7 @@ gera_missil proc
     cmp byte ptr [missil_exists], 1  ;se ja existe
     je .negado                       ;nao pode criar outro
     
-    ; posicionar míssil na frente da nave
+    ; posicionar mï¿½ssil na frente da nave
     mov CX, [nave_pos]      ;posicao x da nave
     add CX, 29              ;extremo direito da nave (largura = 29)
     mov DX, [nave_pos+2]    ;posicao y da nave
@@ -1367,9 +1375,9 @@ gera_missil proc
     pop ax
     ret
 endp
-;---------------Fim Gerar Míssil---------------
+;---------------Fim Gerar Mï¿½ssil---------------
 
-;---------------Mover Míssil---------------
+;---------------Mover Mï¿½ssil---------------
 move_missil proc
     push ax
     push cx
@@ -1408,7 +1416,7 @@ move_missil proc
     pop ax
     ret
 endp
-;---------------Fim Mover Míssil---------------
+;---------------Fim Mover Mï¿½ssil---------------
 
 ;---------------Gera Numero Aleatorio---------------
 gera_numero_aleatorio proc
@@ -1422,11 +1430,11 @@ gera_numero_aleatorio proc
     add ax, 13849
     mov [seed], ax
     
-    ; gera numero de 20 a 120 (área jogável entre barra de status e terreno)
+    ; gera numero de 20 a 120 (ï¿½rea jogï¿½vel entre barra de status e terreno)
     ; - Barra de status: y = 0 a 15
-    ; - Área jogável segura: y = 20 a 120  
-    ; - Terreno: y = 137-199 (terrain_base_y - variação máxima ~62)
-    ; - Altura nave_ini: 13 pixels (então y máximo = 120 para margem segura)
+    ; - ï¿½rea jogï¿½vel segura: y = 20 a 120  
+    ; - Terreno: y = 137-199 (terrain_base_y - variaï¿½ï¿½o mï¿½xima ~62)
+    ; - Altura nave_ini: 13 pixels (entï¿½o y mï¿½ximo = 120 para margem segura)
     xor dx, dx
     mov bx, 100  ; 120-20 = 100
     div bx
@@ -1491,10 +1499,10 @@ verifica_colisao_terreno proc
     push si
     push di
     
-    ; calcula a posição Y do terreno na posição X da nave
+    ; calcula a posiï¿½ï¿½o Y do terreno na posiï¿½ï¿½o X da nave
     mov bx, [nave_pos]      ; x da nave
     
-    ; usa mesma lógica do render_terreno_gen para calcular altura do terreno
+    ; usa mesma lï¿½gica do render_terreno_gen para calcular altura do terreno
     mov ax, bx              ; global_x = nave_pos_x
     
     ; idx1 = global_x & 63
@@ -1514,25 +1522,25 @@ verifica_colisao_terreno proc
 
     add al, dl
     shr al, 1           ; average normal
-    add al, al          ; escalonamento para amplitude visível
+    add al, al          ; escalonamento para amplitude visï¿½vel
     mov ah, 0           ; AX = offset (0..~60)
 
     ; surface_y = terrain_base_y - AX
     mov cx, [terrain_base_y]
-    sub cx, ax          ; CX = altura do terreno nesta posição
-    
+    sub cx, ax          ; CX = altura do terreno nesta posiï¿½ï¿½o
+    sub cx, 2
     ; verifica se a parte inferior da nave (nave_y + 13) toca o terreno
     mov ax, [nave_pos+2]    ; y da nave
     add ax, 13              ; + altura da nave
     cmp ax, cx              ; compara com altura do terreno
-    jl .sem_colisao         ; se nave está acima do terreno, ok
+    jl .sem_colisao         ; se nave estï¿½ acima do terreno, ok
     
     ; colidiu com terreno - perde vida
     dec byte ptr [nave_vida]
     call pinta_vida
     
-    ; reposiciona nave acima do terreno com margem de segurança
-    sub cx, 15              ; margem de segurança
+    ; reposiciona nave acima do terreno com margem de seguranï¿½a
+    sub cx, 15              ; margem de seguranï¿½a
     mov [nave_pos+2], cx
     
 .sem_colisao:
@@ -1547,7 +1555,7 @@ endp
 
 ;-------------------Fim Dar tiro------------------------------------
 
-;-------------------Alterar Opção Menu---------------------------
+;-------------------Alterar Opï¿½ï¿½o Menu---------------------------
 altera_opcao proc
     push ax
     push bx
@@ -1638,7 +1646,7 @@ altera_opcao proc
     pop ax
     ret
 endp
-;-------------------Fim Alterar Opção Menu---------------------------
+;-------------------Fim Alterar Opï¿½ï¿½o Menu---------------------------
 ;-------------------Verificar Tecla Jogo----------------------------
 
 verifica_tecla_jogo proc
@@ -1655,7 +1663,7 @@ verifica_tecla_jogo proc
     je nao_jogada1           ;se ja esta no limite da tela, nao faz nada
     mov CX, [nave_pos]      ;nave_x para CX
     mov DX, [nave_pos+2]    ;nave_y para DX
-    mov SI, 1               ;direção baixo (1)
+    mov SI, 1               ;direï¿½ï¿½o baixo (1)
     call move_vertical      ;apaga linha superior
     inc [nave_pos+2]        ;incrementa uma posicao 
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
@@ -1668,7 +1676,7 @@ not_down:
     je nao_jogada           ;se ja esta no limite da tela, nao faz nada
     mov CX, [nave_pos]      ;nave_x para CX
     mov DX, [nave_pos+2]    ;nave_y para DX
-    mov SI, 0               ;direção cima (0)
+    mov SI, 0               ;direï¿½ï¿½o cima (0)
     call move_vertical      ;apaga linha inferior
     dec [nave_pos+2]        ;decrementa posicao y da nave
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
@@ -1713,12 +1721,12 @@ endp
 ;-------------------Fim Verificar Tecla Jogo----------------------------
 ;-------------------Verificar Tecla Menu----------------------------
 verifica_tecla_menu proc
-    ; testa se há tecla disponível
+    ; testa se hï¿½ tecla disponï¿½vel
     mov ah, 01h
     int 16h
     jz .sem_tecla
 
-    ; lê a tecla (bloqueante)
+    ; lï¿½ a tecla (bloqueante)
     mov ah, 00h
     int 16h
 
@@ -1739,7 +1747,7 @@ verifica_tecla_menu proc
     ; decrementa e trava em 0
     mov ax, [opcao_menu]
     cmp ax, 0
-    je .sem_tecla         ; já no topo
+    je .sem_tecla         ; jï¿½ no topo
     dec ax
     mov [opcao_menu], ax
     call altera_opcao
@@ -1749,7 +1757,7 @@ verifica_tecla_menu proc
     ; incrementa e trava em 1
     mov ax, [opcao_menu]
     cmp ax, 1
-    je .sem_tecla         ; já no fim
+    je .sem_tecla         ; jï¿½ no fim
     inc ax
     mov [opcao_menu], ax
     call altera_opcao
@@ -1772,7 +1780,7 @@ desenha_menu_inicial proc
     push dx
     push bp
 
-    ; ----------- TÍTULO -----------
+    ; ----------- Tï¿½TULO -----------
     mov bl, 0Ah         ; cor azul-claro
     mov dl, 3
 
@@ -1794,7 +1802,7 @@ desenha_menu_inicial proc
     call escreve_string
 
 
-    ; ----------- OPÇÃO JOGAR -----------
+    ; ----------- OPï¿½ï¿½O JOGAR -----------
     mov bl, 0Fh
     mov dl, 11
 
@@ -1812,7 +1820,7 @@ desenha_menu_inicial proc
     call escreve_string
 
 
-    ; ----------- OPÇÃO SAIR -----------
+    ; ----------- OPï¿½ï¿½O SAIR -----------
     mov bl, 0Fh
     mov dl, 11
 
@@ -1878,6 +1886,44 @@ desenha_fase1 proc
 endp
 ;-------------------Fim Desenha Fase 1 -----------------------
 
+
+;-------------------Desenha Fase 2 -----------------------
+desenha_fase2 proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    mov bl, 0Dh                   ;cor do titulo
+    mov dh, 4
+    mov dl, 4
+    mov cx, 35
+    mov bp,OFFSET fase2_1
+    call escreve_string
+    mov dh,5
+    mov bp,OFFSET fase2_2
+    call escreve_string
+    mov dh,6
+    mov bp,OFFSET fase2_3
+    call escreve_string
+    mov dh,7
+    mov bp,OFFSET fase2_4
+    call escreve_string
+    mov dh,8
+    mov bp,OFFSET fase2_5
+    call escreve_string
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Fim Desenha Fase 2 -----------------------
+
 ;-------------------Desenha Game Over -----------------------
 desenha_game_over proc
     push ax
@@ -1909,18 +1955,19 @@ desenha_game_over proc
     pop bx
     pop ax
     ret
-    
+
 endp
-;-------------------Fim Desenha Fase 1 -----------------------
+    
+;-------------------Fim Game Over -----------------------
 
 ;-------------------Atualiza e redesenha Score----------------
 ; Exemplo simples para somar N pontos e redesenhar
-; Entrada: AX = pontos a adicionar (opcional). Se não quiser somar, passe AX=0
+; Entrada: AX = pontos a adicionar (opcional). Se nï¿½o quiser somar, passe AX=0
 atualiza_score proc
     push ax
     push dx
 
-    ; apenas redesenha o score, pontos já foram adicionados antes da chamada
+    ; apenas redesenha o score, pontos jï¿½ foram adicionados antes da chamada
     call desenha_score
 
     pop dx
@@ -1928,6 +1975,100 @@ atualiza_score proc
     ret
 endp
 ;-------------------Fim Atualiza Score------------------------
+
+;-------------------Comeca Jogo------------------------------
+; desenha terreno procedural (scroll = 0)
+comeca_fase proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    xor dx, dx
+    call render_terreno_gen
+    xor dx,dx
+    call desenha_nave
+    
+    ; zera pontuaï¿½ï¿½o e inicializa temporizador
+    mov word ptr [pontuacao], 0
+    mov ax, [tempo_fase]
+    xor dx, dx
+    mov bx, 60
+    div bx
+    mov [tempo_segundos], ax
+    mov byte ptr [frame_counter], 0
+    ; inicializa ticks BIOS tracking
+    mov ah, 00h
+    int 1Ah
+    mov [bios_last_tick], dx
+    mov byte ptr [bios_tick_acc], 0
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Fim Comeca Jogo------------------------------
+
+;-------------------Posicao Aleatoria Inimigo -------------------
+gerar_posicao_inimigo proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    mov ax, seed
+    add ax, 37
+    xor dx, dx
+    mov bx, 292
+    div bx
+    mov inimigo_x, dx
+    add seed, 17
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Posicao Aleatoria Inimigo -------------------
+
+;-------------------Durante o Jogo------------------------------
+durante_jogo proc
+    push ax
+    push bx
+    push cx
+    push dx
+    push bp
+
+    call timer_tick
+    ; incrementa contador de tempo para inimigos
+    inc word ptr [tempo_inimigo]
+
+    ; sistema de inimigos
+    call gera_inimigo
+    call move_inimigo
+
+    ; move missil se existir
+    call move_missil
+
+    pop bp
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+    
+endp
+;-------------------Fim Durante o Jogo------------------------------
+
 
 ;-------------------Inicio-----------------------------------------
 INICIO:
@@ -1937,14 +2078,8 @@ INICIO:
     MOV AX, 0A000h
     mov ES, AX
 
-    ; gerar posição X aleatória
-    mov ax, seed
-    add ax, 37
-    xor dx, dx
-    mov bx, 292
-    div bx
-    mov inimigo_x, dx
-    add seed, 17
+    ; gerar posiï¿½ï¿½o X aleatï¿½ria
+    call gerar_posicao_inimigo
 
     call inicia_video
 
@@ -1978,36 +2113,22 @@ delay_lp:
     jmp menu_loop
 
 jogo:
+    inc fase
     call mudar_tela
+    cmp fase,1
+    jne desenha_2
     call desenha_fase1
-
+    jmp continua
+desenha_2:
+    call desenha_fase2
+continua:
     ; espera 4 segundos na tela da fase
     mov al, 4
     call delay_segundos
 
     ; volta para tela de jogo limpa e desenha barra de status
     call mudar_tela
-
-    ; desenha terreno procedural (scroll = 0)
-    xor dx, dx
-    call render_terreno_gen
-    xor dx,dx
-    call desenha_nave
-    
-    ; zera pontuação e inicializa temporizador
-    mov word ptr [pontuacao], 0
-    mov ax, [tempo_fase]
-    xor dx, dx
-    mov bx, 60
-    div bx
-    mov [tempo_segundos], ax
-    mov byte ptr [frame_counter], 0
-    ; inicializa ticks BIOS tracking
-    mov ah, 00h
-    int 1Ah
-    mov [bios_last_tick], dx
-    mov byte ptr [bios_tick_acc], 0
-
+    call comeca_fase
     call desenha_status_bar
 
 loop_jogo:
@@ -2027,18 +2148,8 @@ loop_jogo:
 ._delay:
     loop ._delay
 
-    ; avança timer (60 frames = 1s)
-    call timer_tick
-
-    ; incrementa contador de tempo para inimigos
-    inc word ptr [tempo_inimigo]
-
-    ; sistema de inimigos
-    call gera_inimigo
-    call move_inimigo
-
-    ; move missil se existir
-    call move_missil
+    ; execuÃ§Ãµes durante o jogo
+    call durante_jogo
 
     ; verifica se perdeu todas as vidas
     cmp byte ptr [nave_vida], 0
@@ -2048,6 +2159,8 @@ loop_jogo:
     mov ax, [tempo_segundos]
     cmp ax, 0
     jne loop_jogo
+    cmp fase,4
+    jne jogo
     jmp fim
 
 sair:
