@@ -173,6 +173,13 @@ vidas_gap      db 24   ; 19 (largura) + 5 de espa?amento
 ; BIOS tick helper
 bios_last_tick dw 0    ; ?ltima contagem baixa (DX) lida via INT 1Ah
 bios_tick_acc  db 0    ; acumula 18 ticks (~1s)
+
+;--------Parametros de Configuracao----------
+game_delay      dw 30000 ; delay do loop principal (controla FPS)
+nave_speed      dw 1     ; pixels por frame
+missil_speed    dw 3     ; pixels por frame
+inimigo_speed   dw 1     ; pixels por frame
+;--------Fim Parametros----------------------
 ;--------Fim Variaveis Fixas-----------------
 
 ;------------------ Entidades e Disparos ------------------
@@ -213,7 +220,16 @@ sin_tab2    db  0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
 
 .CODE  
 
-;---------------Escreve String-----------------
+;---------------------------------------------------------
+; Funcao: Escreve uma string na tela usando a BIOS (INT 10h)
+; Parametros de entrada: 
+;   BP = Offset da string
+;   CX = Tamanho da string
+;   DH = Linha
+;   DL = Coluna
+;   BL = Atributo de cor
+; Parametros de saida: Nenhum
+;---------------------------------------------------------
 escreve_string proc
     push ES         ;salva contextos
     push BX
@@ -232,6 +248,11 @@ escreve_string proc
     ret
 endp
 ;---------------Fim Escreve String-----------------
+;---------------------------------------------------------
+; Funcao: Verifica se a fase atual e a 2 e ajusta as cores e tabelas do terreno
+; Parametros de entrada: [fase]
+; Parametros de saida: Altera [terrain_fill_color], [terrain_base_y], [terrain_surface_color], [sin_tab] se fase == 2
+;---------------------------------------------------------
 verificar_fase2 proc
     push ax
     push bx
@@ -281,9 +302,11 @@ continuar:
     pop ax
     ret
 endp
-;---------------Terreno Procedural (gerador por coluna)-----------------
-; Entrada: DX = scroll_offset (0..large)
-; Gera uma superf?cie usando duas camadas da tabela `sin_tab` e preenche verticalmente
+;---------------------------------------------------------
+; Funcao: Gera e renderiza o terreno proceduralmente coluna por coluna
+; Parametros de entrada: DX = scroll_offset (deslocamento para animacao)
+; Parametros de saida: Desenha o terreno
+;---------------------------------------------------------
 render_terreno_gen proc
     push ax
     push bx
@@ -384,9 +407,11 @@ endp
 ;---------------Fim Terreno Procedural-----------------
 
 
-;---------------Converte pontuacao para "00000"-----------------
-; Entrada:  usa [pontuacao]
-; Sa?da:    escreve 5 d?gitos ASCII em 'score_digits'
+;---------------------------------------------------------
+; Funcao: Converte o valor numerico da pontuacao para string formatada "00000"
+; Parametros de entrada: [pontuacao]
+; Parametros de saida: Atualiza buffer 'score_digits' com os caracteres ASCII
+;---------------------------------------------------------
 score_to_str proc
     push ax
     push bx
@@ -418,8 +443,10 @@ endp
 ;---------------Fim convers?o score-----------------
 
 ;---------------Desenha HUD do Score-----------------
-; Mostra: "SCORE:" (branco) e os 5 d?gitos (verde)
-; Posi??o padr?o: linha 0, coluna 1 (n?mero inicia na coluna 8)
+; Funcao: Desenha o HUD de pontuacao na tela (Label e Valor)
+; Parametros de entrada: Nenhum (usa variaveis globais)
+; Parametros de saida: Desenha na tela via escreve_string
+;---------------------------------------------------------
 desenha_score proc
     push ax
     push bx
@@ -456,8 +483,10 @@ endp
 ;---------------Fim HUD Score-----------------
 
 ;---------------Converte segundos para "MM:SS"-----------------
-; Usa: tempo_segundos
-; Sai: time_digits = MM:SS (2 d?gitos por campo)
+; Funcao: Converte o tempo em segundos para string formatada "MM:SS"
+; Parametros de entrada: [tempo_segundos]
+; Parametros de saida: Atualiza buffer 'time_digits'
+;---------------------------------------------------------
 tempo_to_str proc
     push ax
     push bx
@@ -514,6 +543,10 @@ endp
 ;---------------Fim convers?o tempo-----------------
 
 ;---------------Desenha HUD do Tempo-----------------
+; Funcao: Desenha o HUD de tempo na tela
+; Parametros de entrada: Nenhum
+; Parametros de saida: Desenha na tela via escreve_string
+;---------------------------------------------------------
 desenha_tempo proc
     push ax
     push bx
@@ -548,7 +581,11 @@ desenha_tempo proc
 endp
 ;---------------Fim HUD Tempo-----------------
 
-;---------------Tick do temporizador (60 frames = 1s)-------
+;---------------------------------------------------------
+; Funcao: Gerencia a contagem de tempo baseada no clock da BIOS
+; Parametros de entrada: Nenhum (le INT 1Ah)
+; Parametros de saida: Atualiza [pontuacao] e [tempo_segundos] a cada segundo
+;---------------------------------------------------------
 timer_tick proc
     push ax
     push bx
@@ -602,10 +639,13 @@ endp
 ;---------------Fim Tick do temporizador---------------------
 
 ;---------------Pinta sprite 7x19 (nave_menu)---------------
-; Entrada:
-;   BX = OFFSET sprite (nave_menu)
-;   CX = x
-;   DX = y
+; Funcao: Pinta um sprite de dimensoes 7x19 pixels
+; Parametros de entrada: 
+;   BX = Offset do sprite
+;   CX = Posicao X
+;   DX = Posicao Y
+; Parametros de saida: Desenha (ES)
+;---------------------------------------------------------
 pinta_7x19 proc
     push ax
     push bx
@@ -647,7 +687,10 @@ endp
 ;---------------Fim pinta 7x19-------------------------------
 
 ;---------------Limpa faixa superior (status bar)------------
-; Limpa y=0..15 (16px) em toda a largura (320)
+; Funcao: Limpa a area superior da tela reservada para a barra de status (y=0 a 15)
+; Parametros de entrada: Nenhum
+; Parametros de saida: Preenche a area com cor preta (0)
+;---------------------------------------------------------
 limpa_barra_status proc
     push ax
     push bx
@@ -676,7 +719,11 @@ lb_col:
 endp
 ;---------------Fim limpeza barra----------------------------
 
-;---------------Desenha vidas (3 ?cones no centro)-----------
+;---------------Desenha vidas (3 icones no centro)-----------
+; Funcao: Desenha os icones representativos das vidas restantes
+; Parametros de entrada: [vidas], [vidas_start_x]
+; Parametros de saida: Desenha os icones na barra de status
+;---------------------------------------------------------
 desenha_vidas proc
     push ax
     push bx
@@ -757,8 +804,11 @@ desenha_vidas proc
     ret
 endp
 
-;---------------Delay em segundos (BIOS tick 18.2Hz)---------
-; Entrada: AL = segundos (0..255)
+;---------------Delay em segundos-------------------------
+; Funcao: Gera um atraso (delay) especificado em segundos
+; Parametros de entrada: AL = Segundos a aguardar
+; Parametros de saida: Nenhum (pausa a execucao)
+;---------------------------------------------------------
 delay_segundos proc
     push ax
     push bx
@@ -813,6 +863,10 @@ endp
 ;---------------Fim delay-------------------------------
 
 ;---------------Desenha barra de status completa---------
+; Funcao: Redesenha toda a barra de status (limpa, score, vidas, tempo)
+; Parametros de entrada: Nenhum
+; Parametros de saida: Atualiza a barra superior da tela
+;---------------------------------------------------------
 desenha_status_bar proc
     push ax
     push bx
@@ -837,6 +891,13 @@ endp
 ;---------------Fim desenha_status_bar------------------
 
 ;------------------Pinta Pixel--------------------
+; Funcao: Pinta um unico pixel na tela na posicao especificada
+; Parametros de entrada: 
+;   CX = Coordenada X
+;   DX = Coordenada Y
+;   AL = Cor do pixel
+; Parametros de saida: Altera a memoria (ES:[offset])
+;---------------------------------------------------------
 pinta_pixel proc
     push BX
     push DX
@@ -861,6 +922,13 @@ endp
 ;---------------Fim Pinta Pixel--------------------
 
 ;---------------Pinta e Apaga Desenho--------------------
+; Funcao: Pinta um sprite de 13x29 pixels (usado para naves e meteoros)
+; Parametros de entrada: 
+;   BX = Offset do sprite
+;   CX = Posicao X
+;   DX = Posicao Y
+; Parametros de saida: Desenha na memoria
+;---------------------------------------------------------
 pinta_13X29 proc
     push ax
     push bx
@@ -901,11 +969,14 @@ coluna_loop:
     ret
 endp
 ;------------------Apaga Desenho----------------------
+; Funcao: Apaga um sprite de 13x29 pixels (pinta de preto)
+; Parametros de entrada: 
+;   CX = Posicao X
+;   DX = Posicao Y
+;   SI = Offset do sprite (nao utilizado, mantido para compatibilidade)
+; Parametros de saida: Limpa a area na memoria
+;---------------------------------------------------------
 apagar_sprite_13x29 proc
-    ; recebe:
-    ;   CX = x
-    ;   DX = y
-    ;   SI = OFFSET sprite (s? para manter padr?o, mas n?o usado)
 
     push ax
     push bx
@@ -940,6 +1011,11 @@ apaga_coluna:
     ret
 endp
 
+;---------------------------------------------------------
+; Funcao: Wrapper para desenhar a nave do jogador na posicao atual
+; Parametros de entrada: [nave_pos] (X e Y)
+; Parametros de saida: Desenha a nave na tela
+;---------------------------------------------------------
 desenha_nave proc
     mov BX, OFFSET nave     ;sprite da nave
     mov CX, [nave_pos]      ;posi??o X
@@ -950,6 +1026,10 @@ endp
 ;---------------Fim Pinta e Apaga Desenho--------------------
 
 ;---------------Muda de Tela--------------------
+; Funcao: Limpa a tela inteira pintando de preto
+; Parametros de entrada: Nenhum
+; Parametros de saida: Preenche tudo (64000 bytes) com 0
+;---------------------------------------------------------
 mudar_tela proc
    
     mov CX, 64000     ;seleciona valor limite na tela
@@ -962,13 +1042,14 @@ pinta_preto:
 endp
 ;---------------Fim Muda de Tela--------------------
 
-;---------------Movimenta??o------------------------
-; move_vertical
-; - apaga uma linha horizontal inteira do sprite (29 pixels de largura)
-; Entrada:
-;   CX = x atual
-;   DX = y atual
-;   SI = dire??o (0 = cima, 1 = baixo) - determina qual linha apagar
+;---------------------------------------------------------
+; Funcao: Apaga o rastro vertical de um sprite ao mover (apaga linha superior ou inferior)
+; Parametros de entrada: 
+;   CX = Posicao X atual
+;   DX = Posicao Y atual
+;   SI = Direcao (0 = cima, 1 = baixo)
+; Parametros de saida: Limpa linha de pixels
+;---------------------------------------------------------
 move_vertical proc
     push ax
     push bx
@@ -1016,12 +1097,14 @@ clear_loop_v:
     ret
 endp
 
-; move_horizontal
-; - escreve 13 pixels verticalmente com MOV/ADD (sem multiplica??es por pixel)
-; Entrada:
-;   CX = x atual
-;   DX = y atual
-;   SI = dire??o (0 = esquerda, 1 = direita)
+;---------------------------------------------------------
+; Funcao: Apaga o rastro horizontal de um sprite ao mover (apaga coluna esquerda ou direita)
+; Parametros de entrada: 
+;   CX = Posicao X atual
+;   DX = Posicao Y atual
+;   SI = Direcao (0 = esquerda, 1 = direita)
+; Parametros de saida: Limpa coluna de pixels
+;---------------------------------------------------------
 move_horizontal proc
     push ax
     push bx
@@ -1072,6 +1155,10 @@ endp
 
 
 ;-------------------Incio Video-----------------------------
+; Funcao: Inicializa o modo de video VGA 320x200 256 cores (Mode 13h)
+; Parametros de entrada: Nenhum
+; Parametros de saida: Define modo de video via INT 10h
+;---------------------------------------------------------
 inicia_video proc
     xor AH, AH
     mov AL, 13h
@@ -1080,7 +1167,11 @@ inicia_video proc
 endp
 ;-------------------Fim Incio Video-----------------------------
 
-;-------------------Movimenta??o na Tela Incial-----------------
+;-------------------Movimentacao na Tela Incial-----------------
+; Funcao: Controla a animacao dos elementos na tela de menu (nave, meteoro, inimigo)
+; Parametros de entrada: Variaveis de posicao dos elementos do menu
+; Parametros de saida: Atualiza posicoes e redesenha elementos
+;---------------------------------------------------------
 movimento_tela_inicial proc
     push ax
     push bx
@@ -1183,6 +1274,10 @@ endp
 ;-------------------Movimenta??o na Tela Incial-----------------
 
 ;-------------------Gerar Inimigos------------------------------
+; Funcao: Gerencia a criacao de novos inimigos baseado em tempo e limite maximo
+; Parametros de entrada: [tempo_inimigo], [gen_time], [num_inimigos], [max_inimigos]
+; Parametros de saida: Atualiza vetor [inimigos] e [num_inimigos]
+;---------------------------------------------------------
 gera_inimigo proc
     
     mov DX, gen_time            ;passa intervalo para gerar para DX
@@ -1223,9 +1318,15 @@ ainda_nao_2:
     ret
 endp
 
-;AX recebe x1 e BX o y1
-;CX recebe x2 e DX o y2
-;retorna em DX 0 se nao ha colisao, 1 se ha
+;---------------------------------------------------------
+; Funcao: Verifica colisao retangular entre dois objetos (29x13 pixels)
+; Parametros de entrada: 
+;   AX = X do objeto 1
+;   BX = Y do objeto 1
+;   CX = X do objeto 2
+;   DX = Y do objeto 2
+; Parametros de saida: DX = 1 se houve colisao, 0 caso contrario
+;---------------------------------------------------------
 verifica_colisao proc
     push AX             ;salva contexto
     push BX
@@ -1268,6 +1369,11 @@ final_colisao:
     pop AX
     ret
 endp
+;---------------------------------------------------------
+; Funcao: Atualiza posicao de todos os inimigos ativos e verifica colisoes
+; Parametros de entrada: Vetor [inimigos], [nave_pos], [missil_pos]
+; Parametros de saida: Atualiza posicoes, vidas, pontuacao e redesenha
+;---------------------------------------------------------
 move_inimigo proc
     push SI                     ;salva contexto
     push DI
@@ -1297,7 +1403,8 @@ verificacoes:
     mov DX, [DI+2]              ;passa posicao y do inimigo para DX
     mov SI, 0                   ;direcao esquerda (0)
     call move_horizontal        ;move horizontalmente
-    dec WORD PTR [DI]           ;altera a posicao x do inimigo, reduzindo em uma unidade
+    mov ax, [inimigo_speed]
+    sub WORD PTR [DI], ax       ;altera a posicao x do inimigo
 
     pop SI                      ;recupera contexto
 
@@ -1384,7 +1491,11 @@ endp
 ;-------------------Fim Gerar Inimigos------------------------------
 
 ;-------------------Dar tiro------------------------------------
-;---------------Gerar M?ssil (pixel branco)---------------
+;---------------------------------------------------------
+; Funcao: Cria um missil na posicao atual da nave se nao houver um ativo
+; Parametros de entrada: [nave_pos], [missil_exists]
+; Parametros de saida: Define [missil_pos] e [missil_exists] = 1
+;---------------------------------------------------------
 gera_missil proc
     push ax
     push cx
@@ -1416,7 +1527,11 @@ gera_missil proc
 endp
 ;---------------Fim Gerar M?ssil---------------
 
-;---------------Mover M?ssil---------------
+;---------------------------------------------------------
+; Funcao: Atualiza a posicao do missil ativo
+; Parametros de entrada: [missil_pos], [missil_speed]
+; Parametros de saida: Redesenha o missil ou o desativa se sair da tela
+;---------------------------------------------------------
 move_missil proc
     push ax
     push cx
@@ -1433,7 +1548,7 @@ move_missil proc
     
     ; mover para direita
     mov CX, [missil_pos]
-    add CX, 3                        ;velocidade do missil
+    add CX, [missil_speed]   ;velocidade do missil
     cmp CX, 319                      ;verifica limite da tela
     jg .destroy_missil               ;se passou do limite, destroi
     
@@ -1455,9 +1570,13 @@ move_missil proc
     pop ax
     ret
 endp
-;---------------Fim Mover M?ssil---------------
+;---------------Fim Mover Missil---------------
 
 ;---------------Gera Numero Aleatorio---------------
+; Funcao: Gera um numero pseudo-aleatorio usando Linear Congruential Generator
+; Parametros de entrada: [seed]
+; Parametros de saida: DX = Numero aleatorio entre 20 e 120
+;---------------------------------------------------------
 gera_numero_aleatorio proc
     push ax
     push bx
@@ -1488,6 +1607,10 @@ endp
 
 
 ;---------------Destroi Missil---------------
+; Funcao: Remove o missil da tela e desativa sua flag
+; Parametros de entrada: [missil_pos]
+; Parametros de saida: [missil_exists] = 0, apaga pixel na tela
+;---------------------------------------------------------
 destroi_missil proc
     push ax
     push cx
@@ -1512,6 +1635,10 @@ destroi_missil proc
 endp
 
 ;---------------Pinta Vida (atualiza HUD de vidas)---------------
+; Funcao: Atualiza a variavel de vidas e redesenha o indicador
+; Parametros de entrada: [nave_vida]
+; Parametros de saida: Atualiza [vidas] e chama desenha_vidas
+;---------------------------------------------------------
 pinta_vida proc
     push ax
     push bx
@@ -1530,6 +1657,10 @@ pinta_vida proc
 endp
 
 ;---------------Verifica Colisao com Terreno---------------
+; Funcao: Verifica se a nave colidiu com a altura do terreno na posicao X atual
+; Parametros de entrada: [nave_pos]
+; Parametros de saida: Decrementa vida se colidir e ajusta posicao Y
+;---------------------------------------------------------
 verifica_colisao_terreno proc
     push ax
     push bx
@@ -1594,7 +1725,11 @@ endp
 
 ;-------------------Fim Dar tiro------------------------------------
 
-;-------------------Alterar Op??o Menu---------------------------
+;---------------------------------------------------------
+; Funcao: Atualiza visualmente a opcao selecionada no menu (destaque de cor)
+; Parametros de entrada: [opcao_menu]
+; Parametros de saida: Redesenha textos do menu com cores apropriadas
+;---------------------------------------------------------
 altera_opcao proc
     push ax
     push bx
@@ -1687,7 +1822,10 @@ altera_opcao proc
 endp
 ;-------------------Fim Alterar Op??o Menu---------------------------
 ;-------------------Verificar Tecla Jogo----------------------------
-
+; Funcao: Verifica entrada do teclado durante o jogo e move a nave ou atira
+; Parametros de entrada: Buffer do teclado (INT 16h)
+; Parametros de saida: Atualiza [nave_pos] ou chama gera_missil
+;---------------------------------------------------------
 verifica_tecla_jogo proc
     push BX
     
@@ -1704,7 +1842,8 @@ verifica_tecla_jogo proc
     mov DX, [nave_pos+2]    ;nave_y para DX
     mov SI, 1               ;dire??o baixo (1)
     call move_vertical      ;apaga linha superior
-    inc [nave_pos+2]        ;incrementa uma posicao 
+    mov ax, [nave_speed]
+    add [nave_pos+2], ax    ;incrementa uma posicao 
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave
     jmp nao_jogada          ;pula para o final
@@ -1717,7 +1856,8 @@ not_down:
     mov DX, [nave_pos+2]    ;nave_y para DX
     mov SI, 0               ;dire??o cima (0)
     call move_vertical      ;apaga linha inferior
-    dec [nave_pos+2]        ;decrementa posicao y da nave
+    mov ax, [nave_speed]
+    sub [nave_pos+2], ax    ;decrementa posicao y da nave
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave
     jmp nao_jogada          ;pula para o final
@@ -1732,7 +1872,8 @@ not_up:
     mov DX, [nave_pos+2]    ;nave_y para DX
     mov SI, 0               ;direcao esquerda (0)
     call move_horizontal    ;apaga coluna da direita
-    dec [nave_pos]          ;decrementa posicao x da nave
+    mov ax, [nave_speed]
+    sub [nave_pos], ax      ;decrementa posicao x da nave
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave       ;redesenha a nave
     jmp nao_jogada          ;pula para o final
@@ -1745,7 +1886,8 @@ not_left:
     mov DX, [nave_pos+2]    ;nave_y para DX
     mov SI, 1               ;direcao direita (1)
     call move_horizontal    ;apaga coluna da esquerda
-    inc [nave_pos]          ;incrementa posicao x da nave
+    mov ax, [nave_speed]
+    add [nave_pos], ax      ;incrementa posicao x da nave
     call verifica_colisao_terreno  ;verifica se colidiu com terreno
     call desenha_nave       ;redesenha a nave
     jmp nao_jogada          ;pula para o final
@@ -1759,6 +1901,10 @@ nao_jogada:
 endp
 ;-------------------Fim Verificar Tecla Jogo----------------------------
 ;-------------------Verificar Tecla Menu----------------------------
+; Funcao: Verifica entrada do teclado no menu (setas e enter)
+; Parametros de entrada: Buffer do teclado (INT 16h)
+; Parametros de saida: Atualiza [opcao_menu] ou [flag_entrada]
+;---------------------------------------------------------
 verifica_tecla_menu proc
     ; testa se h? tecla dispon?vel
     mov ah, 01h
@@ -1812,6 +1958,10 @@ endp
 ;-------------------Verificar Tecla Menu----------------------------
 
 ;-------------------Desenha Menu Principal--------------------------
+; Funcao: Desenha todos os elementos estaticos do menu principal
+; Parametros de entrada: Strings de titulo e opcoes
+; Parametros de saida: Desenha na tela
+;---------------------------------------------------------
 desenha_menu_inicial proc
     push ax
     push bx
@@ -1819,7 +1969,7 @@ desenha_menu_inicial proc
     push dx
     push bp
 
-    ; ----------- T?TULO -----------
+    ; ----------- TITULO -----------
     mov bl, 0Ah         ; cor azul-claro
     mov dl, 3
 
@@ -1841,7 +1991,7 @@ desenha_menu_inicial proc
     call escreve_string
 
 
-    ; ----------- OP??O JOGAR -----------
+    ; ----------- OPCAO JOGAR -----------
     mov bl, 0Fh
     mov dl, 11
 
@@ -1859,7 +2009,7 @@ desenha_menu_inicial proc
     call escreve_string
 
 
-    ; ----------- OP??O SAIR -----------
+    ; ----------- OPCAO SAIR -----------
     mov bl, 0Fh
     mov dl, 11
 
@@ -1886,6 +2036,10 @@ endp
 ;-------------------Fim Desenha Menu Principal--------------------------
 
 ;-------------------Desenha Fase 1 -----------------------
+; Funcao: Desenha a tela de apresentacao da Fase 1
+; Parametros de entrada: Strings da fase 1
+; Parametros de saida: Desenha na tela
+;---------------------------------------------------------
 desenha_fase1 proc
     push ax
     push bx
@@ -1927,6 +2081,10 @@ endp
 
 
 ;-------------------Desenha Fase 2 -----------------------
+; Funcao: Desenha a tela de apresentacao da Fase 2
+; Parametros de entrada: Strings da fase 2
+; Parametros de saida: Desenha na tela
+;---------------------------------------------------------
 desenha_fase2 proc
     push ax
     push bx
@@ -1964,6 +2122,10 @@ endp
 ;-------------------Fim Desenha Fase 2 -----------------------
 
 ;-------------------Desenha Game Over -----------------------
+; Funcao: Desenha a tela de Game Over
+; Parametros de entrada: Strings de derrota
+; Parametros de saida: Desenha na tela
+;---------------------------------------------------------
 desenha_game_over proc
     push ax
     push bx
@@ -2000,6 +2162,10 @@ endp
 ;-------------------Fim Game Over -----------------------
 
 ;-------------------Atualiza e redesenha Score----------------
+; Funcao: Wrapper para redesenhar o score atualizado
+; Parametros de entrada: Nenhum (pontuacao ja deve estar atualizada)
+; Parametros de saida: Chama desenha_score
+;---------------------------------------------------------
 ; Exemplo simples para somar N pontos e redesenhar
 ; Entrada: AX = pontos a adicionar (opcional). Se n?o quiser somar, passe AX=0
 atualiza_score proc
@@ -2016,7 +2182,10 @@ endp
 ;-------------------Fim Atualiza Score------------------------
 
 ;-------------------Comeca Jogo------------------------------
-; desenha terreno procedural (scroll = 0)
+; Funcao: Inicializa variaveis e renderiza a tela para o inicio de uma fase
+; Parametros de entrada: [tempo_fase]
+; Parametros de saida: Reseta pontuacao, tempo, desenha terreno e nave
+;---------------------------------------------------------
 comeca_fase proc
     push ax
     push bx
@@ -2054,6 +2223,10 @@ endp
 ;-------------------Fim Comeca Jogo------------------------------
 
 ;-------------------Posicao Aleatoria Inimigo -------------------
+; Funcao: Gera uma posicao X inicial aleatoria para o inimigo (usado no menu)
+; Parametros de entrada: [seed]
+; Parametros de saida: [inimigo_x]
+;---------------------------------------------------------
 gerar_posicao_inimigo proc
     push ax
     push bx
@@ -2080,6 +2253,10 @@ endp
 ;-------------------Posicao Aleatoria Inimigo -------------------
 
 ;-------------------Durante o Jogo------------------------------
+; Funcao: Rotina principal executada a cada frame do jogo
+; Parametros de entrada: Nenhum
+; Parametros de saida: Chama atualizacoes de tempo, inimigos e misseis
+;---------------------------------------------------------
 durante_jogo proc
     push ax
     push bx
@@ -2129,7 +2306,7 @@ menu_loop:
 
     call movimento_tela_inicial
 
-    mov cx, 30000
+    mov cx, [game_delay]
 delay_lp:
     loop delay_lp
 
@@ -2184,11 +2361,11 @@ loop_jogo:
 .no_key2:
 
     ; atraso de frame simples
-    mov cx, 30000
+    mov cx, [game_delay]
 ._delay:
     loop ._delay
 
-    ; execuções durante o jogo
+    ; execucoes durante o jogo
     call durante_jogo
 
     ; verifica se perdeu todas as vidas
