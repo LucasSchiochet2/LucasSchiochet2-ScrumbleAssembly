@@ -1,4 +1,3 @@
-Copilot said: # Scramble Assembly A classic side-scrolling space shooter
 Scramble Assembly
 A classic side-scrolling space shooter game written entirely in x86 Assembly language for DOS.
 
